@@ -1,0 +1,45 @@
+[project]
+name = "backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.42.62",
+    "boto3-stubs[s3]>=1.42.62",
+    "celery>=5.6.2",
+    "fastapi[standard]>=0.135.1",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "pyjwt>=2.11.0",
+    "redis>=7.2.1",
+    "sqlalchemy>=2.0.48",
+    "uvicorn>=0.41.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "pytest-html>=4.2.0",
+    "pytest-mock>=3.15.1",
+    "ruff>=0.15.5",
+    "watchfiles>=1.1.1",
+]
+
+[tool.ruff.lint]
+select = ["I"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest]
+minversion="9.0.0"
+addopts=[
+    "-vv",
+    "--tb=short",
+    "--html=test_reports/test.html",
+    "--cov=app",
+    "--cov-report=term",
+    "--cov-report=html:test_reports/coverage",
+]
+

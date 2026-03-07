@@ -1,0 +1,39 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      target: prod
+      args:
+        UID: ${UID-1000}
+        GID: ${GID-1000}
+
+  celery_worker:
+    build:
+      context: ./backend
+      target: prod
+      args:
+        UID: ${UID-1000}
+        GID: ${GID-1000}
+
+  db:
+    volumes:
+      - ./docker/mysql/init/:/docker-entrypoint-initdb.d/
+      - db_data_prod:/var/lib/mysql
+
+  redis:
+    volumes:
+      - redis_data_prod:/data
+
+  minio:
+    volumes:
+      - minio_data_prod:/data
+    environment:
+      - MINIO_ROOT_USER=${S3_ACCESS_KEY:?Variable is not set or empty}
+      - MINIO_ROOT_PASSWORD=${S3_SECRET_KEY:?Variable is not set or empty}
+      - MINIO_BROWSER=off
+    command: server /data --address :9000
+
+volumes:
+  db_data_prod:
+  redis_data_prod:
+  minio_data_prod:

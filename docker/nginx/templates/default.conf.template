@@ -1,0 +1,11 @@
+server {
+    listen 80;
+
+    location /api/ {
+        proxy_pass ${BACKEND_ENDPOINT};
+    }
+
+    location /minio/ {
+        proxy_pass ${MINIO_ENDPOINT};
+    }
+}
