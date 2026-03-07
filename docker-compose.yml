@@ -1,3 +1,67 @@
+x-health-check-config-default: &default-health-check
+  timeout: 10s
+  interval: 30s
+  retries: 5
+  start_period: 5s
+
+#x-backend-environment: &backend-environment
+#  - ENVIRONMENT=${ENVIRONMENT:?Variable is not set or empty}
+#
+#  - JWT_SECRET_KEY=${JWT_SECRET_KEY:?Variable is not set or empty}
+#  - JWT_ACCESS_TOKEN_EXPIRES=${JWT_ACCESS_TOKEN_EXPIRES:?Variable is not set or empty}
+#  - JWT_REFRESH_TOKEN_EXPIRES=${JWT_REFRESH_TOKEN_EXPIRES:?Variable is not set or empty}
+#
+#  - SMTP_SERVER=${SMTP_SERVER:?Variable is not set or empty}
+#  - SMTP_PORT=${SMTP_PORT:?Variable is not set or empty}
+#  - SMTP_USER=${SMTP_USER:?Variable is not set or empty}
+#  - SMTP_PASSWORD=${SMTP_PASSWORD:?Variable is not set or empty}
+#  - SMTP_SEND_MAIL_FROM=${SMTP_SEND_MAIL_FROM}
+#
+#  - REDIS_HOST=redis
+#  - REDIS_PORT=6379
+#  - REDIS_USER=${REDIS_USER:?Variable is not set or empty}
+#  - REDIS_PASSWORD=${REDIS_PASSWORD:?Variable is not set or empty}
+#
+#  - MYSQL_HOST=db
+#  - MYSQL_PORT=3306
+#  - MYSQL_DATABASE=${MYSQL_DATABASE:?Variable is not set or empty}
+#  - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?Variable is not set or empty}
+#  - MYSQL_USER=${MYSQL_USER:?Variable is not set or empty}
+#  - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+#
+#  - S3_ENDPOINT=http://minio:9000
+#  - S3_ACCESS_KEY=${S3_ACCESS_KEY:?Variable is not set or empty}
+#  - S3_SECRET_KEY=${S3_SECRET_KEY:?Variable is not set or empty}
+
+x-backend-environment: &backend-environment
+  ENVIRONMENT: ${ENVIRONMENT:?Variable is not set or empty}
+
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Variable is not set or empty}
+  JWT_ACCESS_TOKEN_EXPIRES: ${JWT_ACCESS_TOKEN_EXPIRES:?Variable is not set or empty}
+  JWT_REFRESH_TOKEN_EXPIRES: ${JWT_REFRESH_TOKEN_EXPIRES:?Variable is not set or empty}
+
+  SMTP_SERVER: ${SMTP_SERVER:?Variable is not set or empty}
+  SMTP_PORT: ${SMTP_PORT:?Variable is not set or empty}
+  SMTP_USER: ${SMTP_USER:?Variable is not set or empty}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:?Variable is not set or empty}
+  SMTP_SEND_MAIL_FROM: ${SMTP_SEND_MAIL_FROM}
+
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  REDIS_USER: ${REDIS_USER:?Variable is not set or empty}
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?Variable is not set or empty}
+
+  MYSQL_HOST: db
+  MYSQL_PORT: 3306
+  MYSQL_DATABASE: ${MYSQL_DATABASE:?Variable is not set or empty}
+  MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Variable is not set or empty}
+  MYSQL_USER: ${MYSQL_USER:?Variable is not set or empty}
+  MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+  S3_ENDPOINT: http://minio:9000
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:?Variable is not set or empty}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:?Variable is not set or empty}
+
 services:
   proxy:
     image: nginx:latest
@@ -18,33 +82,7 @@ services:
     build: ./backend
     restart: unless-stopped
     environment:
-      - ENVIRONMENT=${ENVIRONMENT:?Variable is not set or empty}
-
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?Variable is not set or empty}
-      - JWT_ACCESS_TOKEN_EXPIRES=${JWT_ACCESS_TOKEN_EXPIRES:?Variable is not set or empty}
-      - JWT_REFRESH_TOKEN_EXPIRES=${JWT_REFRESH_TOKEN_EXPIRES:?Variable is not set or empty}
-
-      - SMTP_SERVER=${SMTP_SERVER:?Variable is not set or empty}
-      - SMTP_PORT=${SMTP_PORT:?Variable is not set or empty}
-      - SMTP_USER=${SMTP_USER:?Variable is not set or empty}
-      - SMTP_PASSWORD=${SMTP_PASSWORD:?Variable is not set or empty}
-      - SMTP_SEND_MAIL_FROM=${SMTP_SEND_MAIL_FROM}
-
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_USER=${REDIS_USER:?Variable is not set or empty}
-      - REDIS_PASSWORD=${REDIS_PASSWORD:?Variable is not set or empty}
-
-      - MYSQL_HOST=db
-      - MYSQL_PORT=3306
-      - MYSQL_DATABASE=${MYSQL_DATABASE:?Variable is not set or empty}
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?Variable is not set or empty}
-      - MYSQL_USER=${MYSQL_USER:?Variable is not set or empty}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-
-      - S3_ENDPOINT=http://minio:9000
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY:?Variable is not set or empty}
-      - S3_SECRET_KEY=${S3_SECRET_KEY:?Variable is not set or empty}
+      <<: *backend-environment
     depends_on:
       celery_worker:
         condition: service_started
@@ -56,42 +94,13 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      timeout: 5s
-      interval: 3s
-      retries: 5
-      start_period: 3s
+      <<: *default-health-check
 
   celery_worker:
     build: ./backend
     restart: unless-stopped
     environment:
-      - ENVIRONMENT=${ENVIRONMENT:?Variable is not set or empty}
-
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?Variable is not set or empty}
-      - JWT_ACCESS_TOKEN_EXPIRES=${JWT_ACCESS_TOKEN_EXPIRES:?Variable is not set or empty}
-      - JWT_REFRESH_TOKEN_EXPIRES=${JWT_REFRESH_TOKEN_EXPIRES:?Variable is not set or empty}
-
-      - SMTP_SERVER=${SMTP_SERVER:?Variable is not set or empty}
-      - SMTP_PORT=${SMTP_PORT:?Variable is not set or empty}
-      - SMTP_USER=${SMTP_USER:?Variable is not set or empty}
-      - SMTP_PASSWORD=${SMTP_PASSWORD:?Variable is not set or empty}
-      - SMTP_SEND_MAIL_FROM=${SMTP_SEND_MAIL_FROM}
-
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_USER=${REDIS_USER:?Variable is not set or empty}
-      - REDIS_PASSWORD=${REDIS_PASSWORD:?Variable is not set or empty}
-
-      - MYSQL_HOST=db
-      - MYSQL_PORT=3306
-      - MYSQL_DATABASE=${MYSQL_DATABASE:?Variable is not set or empty}
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?Variable is not set or empty}
-      - MYSQL_USER=${MYSQL_USER:?Variable is not set or empty}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-
-      - S3_ENDPOINT=http://minio:9000
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY:?Variable is not set or empty}
-      - S3_SECRET_KEY=${S3_SECRET_KEY:?Variable is not set or empty}
+      <<: *backend-environment
     command: celery -A app.celery_worker.celery_worker worker --loglevel=INFO
 
   db:
@@ -104,9 +113,7 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:?Variable is not set or empty}"]
-      timeout: 5s
-      retries: 5
-      start_period: 3s
+      <<: *default-health-check
 
   redis:
     image: redis:8.6
@@ -120,10 +127,7 @@ services:
       --user ${REDIS_USER:?Variable is not set or empty} on ">${REDIS_PASSWORD:?Variable is not set or empty}" allcommands allkeys allchannels
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
-      timeout: 5s
-      interval: 3s
-      retries: 5
-      start_period: 3s
+      <<: *default-health-check
 
   minio:
     image: minio/minio
@@ -134,7 +138,4 @@ services:
     command: server /data --address :9000 --console-address :9001
     healthcheck:
       test: [ "CMD", "curl", "-f",  "http://localhost:9000/minio/health/live" ]
-      timeout: 5s
-      interval: 3s
-      retries: 5
-      start_period: 3s
+      <<: *default-health-check
