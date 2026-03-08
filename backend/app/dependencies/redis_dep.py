@@ -4,7 +4,8 @@ from fastapi import Depends
 from app.core import settings
 
 
-__redis_client: Redis|None = None
+__redis_client: Redis | None = None
+
 
 def get_redis_client() -> Redis:
     """
@@ -14,5 +15,6 @@ def get_redis_client() -> Redis:
     if __redis_client is None:
         __redis_client = from_url(str(settings.REDIS_URL))
     return __redis_client
+
 
 RedisDeps = Annotated[Redis, Depends(get_redis_client)]
