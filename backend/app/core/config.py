@@ -1,10 +1,12 @@
 from pydantic import SecretStr, computed_field, MySQLDsn, RedisDsn, model_validator
 from pydantic_settings import BaseSettings
-from typing import Literal
+from typing import Literal, List
 
 
 class Settings(BaseSettings):
     ENVIRONMENT: Literal["dev", "prod"] = "dev"
+
+    SUPPORTED_FILE_TYPE: List[str] = [".doc", ".docx", ".ppt", ".pptx", ".pdf"]
 
     JWT_SECRET_KEY: SecretStr
     JWT_ALGORITHM: str = "HS256"
