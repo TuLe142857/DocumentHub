@@ -47,7 +47,7 @@ class User(BaseModel):
     username: Mapped[str] = mapped_column(String(50), unique=True)
     email: Mapped[str] = mapped_column(String(50), unique=True)
     password_hash: Mapped[str] = mapped_column(String(256))
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, server_default="1")
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, server_default=func.now()
     )
@@ -57,6 +57,7 @@ class User(BaseModel):
 
     role: Mapped["Role"] = relationship("Role", back_populates="users")
     documents: Mapped[List["Document"]] = relationship(back_populates="owner")
+    liked_documents: Mapped[List["Like"]] = relationship(back_populates="liked_by")
     profile: Mapped["UserProfile"] = relationship(back_populates="user")
     collections: Mapped[List["Collection"]] = relationship(back_populates="owner")
 

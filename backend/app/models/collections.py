@@ -31,7 +31,7 @@ class CollectionItem(BaseModel):
     )
 
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, insert_default=func.now()
+        DateTime, server_default=func.now()
     )
 
     collection: Mapped["Collection"] = relationship(back_populates="items")
