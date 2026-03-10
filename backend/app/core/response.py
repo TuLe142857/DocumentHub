@@ -42,7 +42,7 @@ class APIResponse(JSONResponse):
         """
         Copy from supper class __init__.
         Do not use this.
-        User APIResponse.ok() or APIResponse.error() instead.
+        Use APIResponse.ok() or APIResponse.error() instead.
         """
         super().__init__(content, status_code, headers, media_type, background)
 
@@ -50,6 +50,10 @@ class APIResponse(JSONResponse):
     def ok(
         data: Any = None, message: str | None = None, status_code: int = 200
     ) -> "APIResponse":
+        """
+        Build JSON response for success response.
+        Body will be built as ResponseSuccessSchema.
+        """
         body = {
             "success": True,
             "data": jsonable_encoder(data),
@@ -61,6 +65,10 @@ class APIResponse(JSONResponse):
     def error(
         error_code: ErrorCode = ErrorCode.UNKNOWN_ERROR, message: str | None = None
     ) -> "APIResponse":
+        """
+        Build JSON response for error response.
+        Body will be built as ResponseErrorSchema.
+        """
         body = {
             "success": False,
             "error_code": error_code.error_code,
@@ -84,6 +92,9 @@ class APIResponse(JSONResponse):
         samesite: Literal["lax", "strict", "none"] | None = "lax",
         partitioned: bool = False,
     ) -> "APIResponse":
+        """
+        This method call super().set_cookie() but return self for builder pattern.
+        """
         super().set_cookie(
             key,
             value,
@@ -107,8 +118,12 @@ class APIResponse(JSONResponse):
         httponly: bool = False,
         samesite: Literal["lax", "strict", "none"] | None = "lax",
     ) -> "APIResponse":
+        """
+        This method call super().delete_cookie() but return self for builder pattern.
+        """
         super().delete_cookie(key, path, domain, secure, httponly, samesite)
         return self
 
     def set_header(self, key: str, value: str) -> "APIResponse":
         self.headers[key] = value
+        return self
