@@ -1,4 +1,7 @@
 services:
+  proxy:
+    ports:
+      - "${NGINX_PORT_EXTERNAL:-80}:80"
   backend:
     build:
       context: ./backend
@@ -27,7 +30,7 @@ services:
       - ./backend/app:/app/app
       - ./backend/pyproject.toml:/app/pyproject.toml
       - ./backend/uv.lock:/app/uv.lock
-    command: watchfiles "celery -A app.celery_worker.celery_worker worker --loglevel=INFO" app
+    command: watchfiles "celery worker --loglevel=DEBUG" app
 
   db:
     volumes:
