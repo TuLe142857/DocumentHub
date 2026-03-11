@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+
 from .error_code import ErrorCode
+from .response import APIResponse
 
 
 class AppException(Exception):
@@ -21,4 +23,27 @@ class AppException(Exception):
 
 
 def register_exception_handlers(app: FastAPI) -> None:
-    pass
+    """
+    Register the exception handlers. All exception handlers will return APIResponse.error().
+
+    Exceptions that will be handled:
+        - AppException: custom app exception.
+        - Exception: unexpected exception that had not been caught.
+
+    Args:
+        app: FastAPI app
+
+    Returns:
+        None
+    """
+
+    @app.exception_handler(AppException)
+    def app_exception_handler(request: Request, exc: AppException) -> APIResponse:
+        return APIResponse.error(exc.error_code, exc.message)
+
+    @app.exception_handler(Exception)
+    def unexpected_exception_handler(request: Request, exc: Exception) -> APIResponse:
+        import logging
+
+        logging.exception(exc)
+        return APIResponse.error(ErrorCode.UNKNOWN_ERROR, "Something went wrong :)")

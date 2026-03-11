@@ -1,7 +1,8 @@
 from fastapi import FastAPI
-from app.core import register_exception_handlers, get_db_engine
-from app.routes import api_router
+
+from app.core import get_db_engine, register_exception_handlers
 from app.models import *
+from app.routes import api_router
 
 app = FastAPI()
 

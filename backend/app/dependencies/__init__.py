@@ -1,3 +1,14 @@
-from .db_dep import DBSessionDep, get_db_session
-from .redis_dep import RedisDep, get_redis_client
-from .s3_dep import S3Dep, get_s3_client
+from .infrastructure_dep import (
+    DBSessionDep,
+    RedisDep,
+    S3Dep,
+    get_db_session,
+    get_redis_client,
+    get_s3_client,
+)
+from .service_dep import (
+    AuthServiceDep,
+    JWTServiceDep,
+    get_auth_service,
+    get_jwt_service,
+)

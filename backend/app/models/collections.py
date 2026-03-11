@@ -1,8 +1,8 @@
+import datetime
 from typing import List
 
-from sqlalchemy import String, ForeignKey, DateTime, func, UniqueConstraint
-import datetime
-from sqlalchemy.orm import relationship, mapped_column, Mapped
+from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base_model import BaseModel
 

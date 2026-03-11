@@ -1,9 +1,10 @@
 from fastapi import APIRouter
-from app.core import APIResponse, ResponseSuccessSchema, ResponseErrorSchema
 
-router = APIRouter()
+from app.core import APIResponse, ResponseErrorSchema, ResponseSuccessSchema
+
+router = APIRouter(prefix="/health")
 
 
-@router.get("/health", response_model=ResponseSuccessSchema[None])
+@router.get("/", response_model=ResponseSuccessSchema[None])
 def health_check():
     return APIResponse.ok()

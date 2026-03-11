@@ -1,4 +1,5 @@
 from sqlalchemy import Engine, create_engine
+
 from .config import settings
 
 __db_engine: Engine | None = None

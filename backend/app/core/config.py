@@ -1,6 +1,7 @@
-from pydantic import SecretStr, computed_field, MySQLDsn, RedisDsn, model_validator
+from typing import List, Literal
+
+from pydantic import MySQLDsn, RedisDsn, SecretStr, computed_field, model_validator
 from pydantic_settings import BaseSettings
-from typing import Literal, List
 
 
 class Settings(BaseSettings):

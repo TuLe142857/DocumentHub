@@ -1,9 +1,11 @@
-from typing import List
-from sqlalchemy import String, Enum, ForeignKey, UniqueConstraint, Text, DateTime, func
-from sqlalchemy.orm import relationship, mapped_column, Mapped
 import datetime
-from .base_model import BaseModel
 import enum
+from typing import List
+
+from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .base_model import BaseModel
 
 
 class DocumentVisibility(enum.Enum):

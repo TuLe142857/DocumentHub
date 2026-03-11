@@ -1,8 +1,9 @@
-from sqlalchemy import ForeignKey, DateTime, func
 import datetime
-from .base_model import BaseModel
 
-from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlalchemy import DateTime, ForeignKey, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .base_model import BaseModel
 
 
 class DocumentLike(BaseModel):

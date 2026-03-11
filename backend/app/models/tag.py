@@ -1,9 +1,9 @@
 from typing import List
 
-from .base_model import BaseModel
+from sqlalchemy import Column, ForeignKey, Integer, String, Table
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from sqlalchemy import String, Table, Column, Integer, ForeignKey
-from sqlalchemy.orm import relationship, Mapped, mapped_column
+from .base_model import BaseModel
 
 
 class Tag(BaseModel):
