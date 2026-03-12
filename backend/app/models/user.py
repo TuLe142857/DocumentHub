@@ -95,6 +95,10 @@ class User(BaseModel):
     profile: Mapped["UserProfile"] = relationship(back_populates="user")
     collections: Mapped[List["Collection"]] = relationship(back_populates="owner")
 
+    @property
+    def role_name(self) -> str:
+        return self.role.name
+
     def set_password(self, password: str):
         """
         Set password for user

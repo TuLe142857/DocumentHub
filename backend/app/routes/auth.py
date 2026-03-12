@@ -1,16 +1,32 @@
 from fastapi import APIRouter
+from sqlalchemy import select
 
-from app.core import APIResponse, ResponseErrorSchema, ResponseSuccessSchema
-from app.dependencies import AccessTokenDep, AuthServiceDep, RefreshTokenDep
+from app.core import APIResponse, ErrorCode, ResponseErrorSchema, ResponseSuccessSchema
+from app.dependencies import (
+    AccessTokenDep,
+    AuthServiceDep,
+    DBSessionDep,
+    RefreshTokenDep,
+)
+from app.models import User
 from app.schemas.request.auth_request import *
 from app.schemas.response.auth_response import *
+from app.schemas.user_schema import UserSchema
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.get("/whoami")
-def whoami(access_token: AccessTokenDep):
-    return APIResponse.ok()
+def whoami(access_token: AccessTokenDep, db_session: DBSessionDep):
+    user_id = str(access_token.get("sub"))
+    user = db_session.execute(
+        select(User).where(User.id == user_id)
+    ).scalar_one_or_none()
+    if user:
+        res = UserSchema.model_validate(user)
+        return APIResponse.ok(data=res)
+    else:
+        return APIResponse.error(ErrorCode.INVALID_CREDENTIALS)
 
 
 @router.post("/register/request", response_model=ResponseSuccessSchema[None])
