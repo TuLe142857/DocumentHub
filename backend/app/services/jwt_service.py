@@ -39,7 +39,7 @@ class JWTService:
             "sub": sub,
             "type": "refresh",
             "exp": datetime.datetime.now(datetime.timezone.utc)
-            + datetime.timedelta(seconds=int(self.access_token_expire_seconds)),
+            + datetime.timedelta(seconds=int(self.refresh_token_expire_seconds)),
         }
         if claim:
             for key, value in claim.items():
@@ -62,9 +62,11 @@ class JWTService:
                 )
             return payload
         except jwt.ExpiredSignatureError:
-            raise AppException(ErrorCode.JWT_TOKEN_EXPIRED, "Token has expired")
+            raise AppException(ErrorCode.JWT_TOKEN_EXPIRED, "Refresh token has expired")
         except jwt.InvalidTokenError:
-            raise AppException(ErrorCode.INVALID_JWT_TOKEN, "Invalid token")
+            raise AppException(
+                ErrorCode.INVALID_JWT_TOKEN, "Invalid token refresh token"
+            )
 
     def validate_access_token(
         self, access_token: str, require_fresh: bool = False
@@ -84,9 +86,13 @@ class JWTService:
                     ErrorCode.INVALID_JWT_TOKEN, "Token is not type access"
                 )
             if require_fresh and not payload.get("fresh"):
-                raise AppException(ErrorCode.JWT_TOKEN_NOT_FRESH)
+                raise AppException(
+                    ErrorCode.JWT_TOKEN_NOT_FRESH, "Require fresh access token"
+                )
             return payload
         except jwt.ExpiredSignatureError:
-            raise AppException(ErrorCode.JWT_TOKEN_EXPIRED, "Token has expired")
+            raise AppException(ErrorCode.JWT_TOKEN_EXPIRED, "Access token has expired")
         except jwt.InvalidTokenError as e:
-            raise AppException(ErrorCode.INVALID_JWT_TOKEN, "Invalid token " + str(e))
+            raise AppException(
+                ErrorCode.INVALID_JWT_TOKEN, "Invalid token refresh token"
+            )
