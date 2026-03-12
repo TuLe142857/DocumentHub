@@ -30,3 +30,17 @@ class LoginRequest(BaseModel):
 
     identity: Annotated[str, Field(description="username or email")]
     password: Annotated[str, Field()]
+
+
+class ForgotPasswordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    identity: Annotated[str, Field(description="username or email")]
+
+
+class ResetPasswordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    identity: Annotated[str, Field(description="username or email")]
+    otp_code: Annotated[str, Field()]
+    new_password: Annotated[str, Field(min_length=8, max_length=16)]

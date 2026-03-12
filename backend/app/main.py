@@ -10,7 +10,7 @@ app = FastAPI()
 
 register_exception_handlers(app)
 
-BaseModel.metadata.drop_all(bind=get_db_engine())
+# BaseModel.metadata.drop_all(bind=get_db_engine())
 BaseModel.metadata.create_all(bind=get_db_engine())
 
 app.include_router(api_router)

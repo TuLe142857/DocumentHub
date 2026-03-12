@@ -1,4 +1,5 @@
 import datetime
+from typing import Any
 
 import jwt
 
@@ -45,7 +46,7 @@ class JWTService:
                 payload[key] = value
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
 
-    def validate_refresh_token(self, refresh_token: str) -> dict:
+    def validate_refresh_token(self, refresh_token: str) -> dict[str, Any]:
         """
         Raises AppException if the refresh token is invalid
         :param refresh_token: refresh token
@@ -53,7 +54,7 @@ class JWTService:
         """
         try:
             payload = jwt.decode(
-                refresh_token, self.secret_key, algorithm=[self.algorithm]
+                refresh_token, self.secret_key, algorithms=[self.algorithm]
             )
             if payload.get("type") != "refresh":
                 raise AppException(
@@ -65,22 +66,27 @@ class JWTService:
         except jwt.InvalidTokenError:
             raise AppException(ErrorCode.INVALID_JWT_TOKEN, "Invalid token")
 
-    def validate_access_token_expired(self, access_token: str) -> dict:
+    def validate_access_token(
+        self, access_token: str, require_fresh: bool = False
+    ) -> dict[str, Any]:
         """
         Raises AppException if the access token is invalid
         :param access_token: access token
+        :param require_fresh: require fresh token
         :return: payload as dict
         """
         try:
             payload = jwt.decode(
-                access_token, self.secret_key, algorithm=[self.algorithm]
+                access_token, self.secret_key, algorithms=[self.algorithm]
             )
             if payload.get("type") != "access":
                 raise AppException(
                     ErrorCode.INVALID_JWT_TOKEN, "Token is not type access"
                 )
+            if require_fresh and not payload.get("fresh"):
+                raise AppException(ErrorCode.JWT_TOKEN_NOT_FRESH)
             return payload
         except jwt.ExpiredSignatureError:
             raise AppException(ErrorCode.JWT_TOKEN_EXPIRED, "Token has expired")
-        except jwt.InvalidTokenError:
-            raise AppException(ErrorCode.INVALID_JWT_TOKEN, "Invalid token")
+        except jwt.InvalidTokenError as e:
+            raise AppException(ErrorCode.INVALID_JWT_TOKEN, "Invalid token " + str(e))

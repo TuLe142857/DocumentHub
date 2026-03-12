@@ -9,6 +9,7 @@ from pwdlib.hashers.argon2 import Argon2Hasher
 from sqlalchemy import (
     Boolean,
     DateTime,
+    Engine,
     Enum,
     ForeignKey,
     Integer,
@@ -18,11 +19,12 @@ from sqlalchemy import (
     or_,
     select,
 )
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from .base_model import BaseModel
 
-password_hash = PasswordHash((Argon2Hasher,))
+password_hash = PasswordHash((Argon2Hasher(),))
 
 
 class Gender(enum.Enum):
@@ -38,6 +40,37 @@ class Role(BaseModel):
     name: Mapped[str] = mapped_column(String(50), unique=True)
 
     users: Mapped[List["User"]] = relationship(back_populates="role")
+
+    @staticmethod
+    def get_or_create(role_name: str, engine: Engine) -> "int":
+        """
+
+        Args:
+            role_name:
+            engine:
+
+        Returns: role.id
+
+        """
+        with Session(engine) as session:
+            role_in_db = session.execute(
+                select(Role).where(Role.name == role_name)
+            ).scalar_one_or_none()
+            if role_in_db:
+                return role_in_db.name
+
+            # try to create new role
+            new_role = Role(name=role_name)
+            session.add(new_role)
+            try:
+                session.commit()
+                return new_role.id
+            except IntegrityError:
+                # may be some thread has created this new role
+                session.rollback()
+                return session.execute(
+                    select(Role.id).where(Role.name == role_name)
+                ).scalar_one_or_none()
 
 
 class User(BaseModel):

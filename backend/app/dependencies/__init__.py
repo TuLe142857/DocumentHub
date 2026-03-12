@@ -12,3 +12,10 @@ from .service_dep import (
     get_auth_service,
     get_jwt_service,
 )
+from .token_cookie_dep import (
+    AccessTokenDep,
+    FreshAccessTokenDep,
+    JWTCookie,
+    OptionalAccessTokenDep,
+    RefreshTokenDep,
+)
