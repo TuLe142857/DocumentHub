@@ -17,5 +17,5 @@ class DocumentLike(BaseModel):
         DateTime, server_default=func.now()
     )
 
-    document: Mapped["Document"] = relationship(backref="liked_by")
-    liked_by: Mapped["User"] = relationship(backref="liked_documents")
+    document: Mapped["Document"] = relationship(back_populates="liked_by")
+    user: Mapped["User"] = relationship(back_populates="liked_documents")

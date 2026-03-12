@@ -56,12 +56,14 @@ class JWTService:
                 refresh_token, self.secret_key, algorithm=[self.algorithm]
             )
             if payload.get("type") != "refresh":
-                raise AppException(ErrorCode.INVALID_TOKEN, "Token is not type refresh")
+                raise AppException(
+                    ErrorCode.INVALID_JWT_TOKEN, "Token is not type refresh"
+                )
             return payload
         except jwt.ExpiredSignatureError:
-            raise AppException(ErrorCode.TOKEN_EXPIRED, "Token has expired")
+            raise AppException(ErrorCode.JWT_TOKEN_EXPIRED, "Token has expired")
         except jwt.InvalidTokenError:
-            raise AppException(ErrorCode.INVALID_TOKEN, "Invalid token")
+            raise AppException(ErrorCode.INVALID_JWT_TOKEN, "Invalid token")
 
     def validate_access_token_expired(self, access_token: str) -> dict:
         """
@@ -74,9 +76,11 @@ class JWTService:
                 access_token, self.secret_key, algorithm=[self.algorithm]
             )
             if payload.get("type") != "access":
-                raise AppException(ErrorCode.INVALID_TOKEN, "Token is not type access")
+                raise AppException(
+                    ErrorCode.INVALID_JWT_TOKEN, "Token is not type access"
+                )
             return payload
         except jwt.ExpiredSignatureError:
-            raise AppException(ErrorCode.TOKEN_EXPIRED, "Token has expired")
+            raise AppException(ErrorCode.JWT_TOKEN_EXPIRED, "Token has expired")
         except jwt.InvalidTokenError:
-            raise AppException(ErrorCode.INVALID_TOKEN, "Invalid token")
+            raise AppException(ErrorCode.INVALID_JWT_TOKEN, "Invalid token")

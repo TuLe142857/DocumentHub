@@ -25,7 +25,9 @@ class Collection(BaseModel):
 class CollectionItem(BaseModel):
     __tablename__ = "collection_items"
 
-    collection_id: Mapped[int] = mapped_column(primary_key=True)
+    collection_id: Mapped[int] = mapped_column(
+        ForeignKey("collections.id"), primary_key=True
+    )
     document_id: Mapped[int] = mapped_column(
         ForeignKey("documents.id"), primary_key=True
     )

@@ -64,7 +64,7 @@ class Document(BaseModel):
     banned_at: Mapped[datetime.datetime | None] = mapped_column(DateTime)
 
     owner: Mapped["User"] = relationship(back_populates="documents")
-    liked_by: Mapped[List["DocumentLike"]] = relationship(backref="document")
+    liked_by: Mapped[List["DocumentLike"]] = relationship(back_populates="document")
     category: Mapped["Category"] = relationship(back_populates="documents")
     tags: Mapped[List["Tag"]] = relationship(
         secondary="document_tags", back_populates="documents"

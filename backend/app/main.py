@@ -4,6 +4,8 @@ from app.core import get_db_engine, register_exception_handlers
 from app.models import *
 from app.routes import api_router
 
+from .celery_worker import celery_worker
+
 app = FastAPI()
 
 register_exception_handlers(app)

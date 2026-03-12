@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
+from .config import settings
 from .error_code import ErrorCode
 
 T = TypeVar("T")
@@ -122,6 +123,46 @@ class APIResponse(JSONResponse):
         """
         super().delete_cookie(key, path, domain, secure, httponly, samesite)
         return self
+
+    def set_access_cookie(self, access_token: str) -> "APIResponse":
+        return self.set_cookie(
+            key=settings.JWT_ACCESS_COOKIE_NAME,
+            value=access_token,
+            max_age=settings.JWT_ACCESS_TOKEN_EXPIRES,
+            httponly=True,
+            secure=settings.JWT_COOKIE_SECURE,
+            samesite=settings.JWT_COOKIE_SAMESITE,
+            path=settings.JWT_ACCESS_COOKIE_PATH,
+        )
+
+    def delete_access_cookie(self) -> "APIResponse":
+        return self.delete_cookie(
+            key=settings.JWT_ACCESS_COOKIE_NAME,
+            path=settings.JWT_ACCESS_COOKIE_PATH,
+            secure=settings.JWT_COOKIE_SECURE,
+            httponly=True,
+            samesite=settings.JWT_COOKIE_SAMESITE,
+        )
+
+    def set_refresh_cookie(self, refresh_token: str) -> "APIResponse":
+        return self.set_cookie(
+            key=settings.JWT_REFRESH_COOKIE_NAME,
+            value=refresh_token,
+            max_age=settings.JWT_REFRESH_TOKEN_EXPIRES,
+            httponly=True,
+            secure=settings.JWT_COOKIE_SECURE,
+            samesite=settings.JWT_COOKIE_SAMESITE,
+            path=settings.JWT_REFRESH_COOKIE_PATH,
+        )
+
+    def delete_refresh_cookie(self) -> "APIResponse":
+        return self.delete_cookie(
+            key=settings.JWT_REFRESH_COOKIE_NAME,
+            path=settings.JWT_REFRESH_COOKIE_PATH,
+            secure=settings.JWT_COOKIE_SECURE,
+            httponly=True,
+            samesite=settings.JWT_COOKIE_SAMESITE,
+        )
 
     def set_header(self, key: str, value: str) -> "APIResponse":
         self.headers[key] = value

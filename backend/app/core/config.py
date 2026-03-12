@@ -11,8 +11,25 @@ class Settings(BaseSettings):
 
     JWT_SECRET_KEY: SecretStr
     JWT_ALGORITHM: str = "HS256"
+
     JWT_ACCESS_TOKEN_EXPIRES: int = 5 * 60
     JWT_REFRESH_TOKEN_EXPIRES: int = 7 * 24 * 60 * 60
+
+    JWT_ACCESS_COOKIE_NAME: str = "access_token"
+    JWT_ACCESS_COOKIE_PATH: str = "/api"
+
+    JWT_REFRESH_COOKIE_NAME: str = "refresh_token"
+    JWT_REFRESH_COOKIE_PATH: str = "/api/auth/refresh"
+
+    JWT_COOKIE_SECURE: bool = False
+    JWT_COOKIE_SAMESITE: str = "Lax"
+
+    SMTP_SERVER: str
+    SMTP_PORT: int
+    SMTP_USER: str
+    SMTP_PASSWORD: SecretStr
+    SMTP_SEND_MAIL_FROM: str
+    SMTP_USE_TLS: bool
 
     MYSQL_HOST: str
     MYSQL_PORT: int = 3306
@@ -37,11 +54,6 @@ class Settings(BaseSettings):
     REDIS_USER: str
     REDIS_PASSWORD: SecretStr
 
-    @computed_field
-    @property
-    def REDIS_URL(self) -> RedisDsn:
-        return self.get_redis_url(0)
-
     def get_redis_url(self, db: int = 0) -> RedisDsn:
         return RedisDsn.build(
             scheme="redis",
@@ -51,6 +63,21 @@ class Settings(BaseSettings):
             port=self.REDIS_PORT,
             path=str(db),
         )
+
+    @computed_field
+    @property
+    def REDIS_URL(self) -> RedisDsn:
+        return self.get_redis_url(0)
+
+    @computed_field
+    @property
+    def CELERY_BROKER(self) -> RedisDsn:
+        return self.get_redis_url(1)
+
+    @computed_field
+    @property
+    def CELERY_BACKEND(self) -> RedisDsn:
+        return self.get_redis_url(1)
 
     S3_ENDPOINT: str
     S3_ACCESS_KEY: str

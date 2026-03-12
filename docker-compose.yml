@@ -16,6 +16,7 @@ x-backend-environment: &backend-environment
   SMTP_USER: ${SMTP_USER:?Variable is not set or empty}
   SMTP_PASSWORD: ${SMTP_PASSWORD:?Variable is not set or empty}
   SMTP_SEND_MAIL_FROM: ${SMTP_SEND_MAIL_FROM}
+  SMTP_USE_TLS: ${SMTP_USE_TLS:?Variable is not set or empty}
 
   REDIS_HOST: redis
   REDIS_PORT: 6379

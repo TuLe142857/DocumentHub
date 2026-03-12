@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request
+from fastapi.exceptions import HTTPException, RequestValidationError
 
 from .error_code import ErrorCode
 from .response import APIResponse
@@ -28,6 +29,8 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     Exceptions that will be handled:
         - AppException: custom app exception.
+        - RequestValidationError: override fastapi RequestValidationError handler.
+        - HTTPException: override fastapi HTTPException handler.
         - Exception: unexpected exception that had not been caught.
 
     Args:
@@ -41,9 +44,18 @@ def register_exception_handlers(app: FastAPI) -> None:
     def app_exception_handler(request: Request, exc: AppException) -> APIResponse:
         return APIResponse.error(exc.error_code, exc.message)
 
+    @app.exception_handler(RequestValidationError)
+    def request_validation_error_handler(
+        request: Request, exc: RequestValidationError
+    ) -> APIResponse:
+        return APIResponse.error(ErrorCode.VALIDATION_ERROR, str(exc.errors()))
+
+    @app.exception_handler(HTTPException)
+    def http_exception_handler(request: Request, exc: HTTPException) -> APIResponse:
+        return APIResponse.error(ErrorCode.UNKNOWN_ERROR, str(exc))
+
     @app.exception_handler(Exception)
     def unexpected_exception_handler(request: Request, exc: Exception) -> APIResponse:
         import logging
-
         logging.exception(exc)
         return APIResponse.error(ErrorCode.UNKNOWN_ERROR, "Something went wrong :)")
