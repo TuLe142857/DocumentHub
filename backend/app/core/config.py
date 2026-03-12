@@ -1,5 +1,5 @@
 from typing import List, Literal
-
+from functools import lru_cache
 from pydantic import MySQLDsn, RedisDsn, SecretStr, computed_field, model_validator
 from pydantic_settings import BaseSettings
 
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     JWT_REFRESH_COOKIE_PATH: str = "/api/auth/refresh"
 
     JWT_COOKIE_SECURE: bool = False
-    JWT_COOKIE_SAMESITE: str = "Lax"
+    JWT_COOKIE_SAMESITE: Literal["lax", "strict"] = "lax"
 
     SMTP_SERVER: str
     SMTP_PORT: int
@@ -97,5 +97,6 @@ class Settings(BaseSettings):
                 )
         return self
 
-
-settings = Settings()
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

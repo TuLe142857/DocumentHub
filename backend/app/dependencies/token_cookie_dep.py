@@ -2,7 +2,7 @@ from typing import Annotated, Any
 
 from fastapi import Depends, Request
 
-from app.core import AppException, ErrorCode, settings
+from app.core import AppException, ErrorCode, get_settings
 
 from .service_dep import JWTServiceDep
 
@@ -51,7 +51,7 @@ class JWTCookie:
 
         """
         if self.refresh:
-            refresh_token = request.cookies.get(settings.JWT_REFRESH_COOKIE_NAME)
+            refresh_token = request.cookies.get(get_settings().JWT_REFRESH_COOKIE_NAME)
             if not refresh_token:
                 if self.optional:
                     return None
@@ -61,7 +61,7 @@ class JWTCookie:
                     )
             return jwt_service.validate_refresh_token(refresh_token)
         else:
-            access_token = request.cookies.get(settings.JWT_ACCESS_COOKIE_NAME)
+            access_token = request.cookies.get(get_settings().JWT_ACCESS_COOKIE_NAME)
             if not access_token:
                 if self.optional:
                     return None

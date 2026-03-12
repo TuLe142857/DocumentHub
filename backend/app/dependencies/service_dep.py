@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from app.core import settings
+from app.core import get_settings
 from app.services import *
 
 from .infrastructure_dep import DBSessionDep, RedisDep, S3Dep
@@ -10,10 +10,10 @@ from .infrastructure_dep import DBSessionDep, RedisDep, S3Dep
 
 def get_jwt_service() -> JWTService:
     return JWTService(
-        secret_key=settings.JWT_SECRET_KEY.get_secret_value(),
-        algorithm=settings.JWT_ALGORITHM,
-        access_token_expire_seconds=settings.JWT_ACCESS_TOKEN_EXPIRES,
-        refresh_token_expire_seconds=settings.JWT_REFRESH_TOKEN_EXPIRES,
+        secret_key=get_settings().JWT_SECRET_KEY.get_secret_value(),
+        algorithm=get_settings().JWT_ALGORITHM,
+        access_token_expire_seconds=get_settings().JWT_ACCESS_TOKEN_EXPIRES,
+        refresh_token_expire_seconds=get_settings().JWT_REFRESH_TOKEN_EXPIRES,
     )
 
 

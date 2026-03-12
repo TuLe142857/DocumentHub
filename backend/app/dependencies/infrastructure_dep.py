@@ -6,7 +6,7 @@ from mypy_boto3_s3 import S3Client
 from redis import Redis, from_url
 from sqlalchemy.orm import Session
 
-from app.core import get_db_engine, settings
+from app.core import get_db_engine, get_settings
 
 
 def get_db_session() -> Generator[Session, None, None]:
@@ -25,7 +25,7 @@ def get_redis_client() -> Redis:
     """
     global __redis_client
     if __redis_client is None:
-        __redis_client = from_url(str(settings.REDIS_URL))
+        __redis_client = from_url(str(get_settings().REDIS_URL))
     return __redis_client
 
 
@@ -42,9 +42,9 @@ def get_s3_client() -> S3Client:
     if __s3_client is None:
         __s3_client = boto3.client(
             __name__,
-            aws_access_key_id=settings.S3_ACCESS_KEY,
-            aws_secret_access_key=settings.S3_SECRET_KEY.get_secret_value(),
-            endpoint_url=settings.S3_ENDPOINT,
+            aws_access_key_id=get_settings().S3_ACCESS_KEY,
+            aws_secret_access_key=get_settings().S3_SECRET_KEY.get_secret_value(),
+            endpoint_url=get_settings().S3_ENDPOINT,
         )
     return __s3_client
 
