@@ -27,8 +27,13 @@ def send_email_task(
     if html_content:
         msg.add_alternative(html_content, subtype="html")
 
-    with smtplib.SMTP(host=get_settings().SMTP_SERVER, port=get_settings().SMTP_PORT) as server:
+    with smtplib.SMTP(
+        host=get_settings().SMTP_SERVER, port=get_settings().SMTP_PORT
+    ) as server:
         if get_settings().SMTP_USE_TLS:
             server.starttls()
-        server.login(user=get_settings().SMTP_USER, password=get_settings().SMTP_PASSWORD.get_secret_value())
+        server.login(
+            user=get_settings().SMTP_USER,
+            password=get_settings().SMTP_PASSWORD.get_secret_value(),
+        )
         server.send_message(msg)

@@ -1,5 +1,6 @@
-from typing import List, Literal
 from functools import lru_cache
+from typing import List, Literal
+
 from pydantic import MySQLDsn, RedisDsn, SecretStr, computed_field, model_validator
 from pydantic_settings import BaseSettings
 
@@ -96,6 +97,7 @@ class Settings(BaseSettings):
                     f"Please change default value of secret variable `{key}`. Current value: `changethis`"
                 )
         return self
+
 
 @lru_cache
 def get_settings() -> Settings:

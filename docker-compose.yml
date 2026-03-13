@@ -35,7 +35,9 @@ x-backend-environment: &backend-environment
   S3_SECRET_KEY: ${S3_SECRET_KEY:?Variable is not set or empty}
 
 x-celery-environment: &celery-environment
-  CELERY_APP: app.celery_worker.celery_worker
+  # app.worker: file/module
+  # celery_worker: instance of Celery in file/module
+  CELERY_APP: app.worker:celery_worker
 
 services:
   proxy:
