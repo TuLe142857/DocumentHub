@@ -29,3 +29,10 @@ def get_auth_service(
 
 
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+
+
+def get_document_service() -> DocumentService:
+    pass
+
+
+DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]

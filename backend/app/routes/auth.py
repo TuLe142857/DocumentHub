@@ -17,19 +17,19 @@ from app.schemas.user_schema import UserSchema
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.get("/whoami")
+@router.get("/whoami", response_model=ResponseSuccessSchema[SelfProfileResponse])
 def whoami(access_token: AccessTokenDep, db_session: DBSessionDep):
     user_id = str(access_token.get("sub"))
     user = db_session.execute(
         select(User).options(selectinload(User.role)).where(User.id == user_id)
     ).scalar_one_or_none()
-    if user and user.role:
-        res = UserSchema.model_validate(user)
+    if user:
+        res = SelfProfileResponse.model_validate(user)
         return APIResponse.ok(data=res)
     else:
         return APIResponse.error(
             ErrorCode.INVALID_CREDENTIALS,
-            message=f"Invalid credentials. {type(user)}{type(user.role)}",
+            message=f"Invalid credentials.",
         )
 
 

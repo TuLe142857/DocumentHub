@@ -18,6 +18,10 @@ from .worker import celery_worker
 @asynccontextmanager
 async def custom_lifespan(app_instance: FastAPI):
     # startup...
+    from sqlalchemy.schema import CreateTable
+
+    for table in BaseModel.metadata.sorted_tables:
+        print(CreateTable(table))
 
     # clear cache to reload setting from env
     # this is for testing with custom config

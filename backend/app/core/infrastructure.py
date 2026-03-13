@@ -21,7 +21,7 @@ def get_redis() -> Redis:
 @lru_cache
 def get_s3() -> S3Client:
     return boto3.client(
-        __name__,
+        "s3",
         aws_access_key_id=get_settings().S3_ACCESS_KEY,
         aws_secret_access_key=get_settings().S3_SECRET_KEY.get_secret_value(),
         endpoint_url=get_settings().S3_ENDPOINT,
