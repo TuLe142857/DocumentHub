@@ -8,13 +8,13 @@ from sqlalchemy.orm import Session
 
 from app.core import get_db_engine, get_redis, get_s3
 
+DBEngineDep = Annotated[Engine, Depends(get_db_engine)]
 
-def get_db_session() -> Generator[Session, None, None]:
-    with Session(bind=get_db_engine()) as session:
+
+def get_db_session(engine: DBEngineDep) -> Generator[Session, None, None]:
+    with Session(bind=engine) as session:
         yield session
 
-
-DBEngineDep = Annotated[Engine, Depends(get_db_engine)]
 
 DBSessionDep = Annotated[Session, Depends(get_db_session)]
 

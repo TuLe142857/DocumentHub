@@ -42,34 +42,34 @@ class Role(BaseModel):
     users: Mapped[List["User"]] = relationship(back_populates="role")
 
     @staticmethod
-    def get_or_create(role_name: str, engine: Engine) -> "int":
+    def get_or_create(role_name: str, session: Session) -> "Role":
         """
 
         Args:
             role_name:
-            engine:
+            session:
 
         Returns: role.id
 
         """
-        with Session(engine) as session:
+        with session.begin_nested():
             role_in_db = session.execute(
                 select(Role).where(Role.name == role_name)
             ).scalar_one_or_none()
             if role_in_db:
-                return role_in_db.name
+                return role_in_db
 
             # try to create new role
             new_role = Role(name=role_name)
             session.add(new_role)
             try:
-                session.commit()
-                return new_role.id
+                session.flush()
+                return new_role
             except IntegrityError:
                 # may be some thread has created this new role
                 session.rollback()
                 return session.execute(
-                    select(Role.id).where(Role.name == role_name)
+                    select(Role).where(Role.name == role_name)
                 ).scalar_one_or_none()
 
 
@@ -97,7 +97,7 @@ class User(BaseModel):
 
     @property
     def role_name(self) -> str:
-        return self.role.name
+        return self.role.name if self.role else None
 
     def set_password(self, password: str):
         """
@@ -117,7 +117,7 @@ class User(BaseModel):
         return password_hash.verify(password, self.password_hash)
 
     @staticmethod
-    def get_by_identity(session: Session, identity: str) -> "User|None":
+    def get_by_identity(identity: str, session: Session) -> "User|None":
         """
         Get user by identity(email or username)
         :param session: SQLAlchemy session, use to query users

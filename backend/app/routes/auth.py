@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.core import APIResponse, ErrorCode, ResponseErrorSchema, ResponseSuccessSchema
 from app.dependencies import (
@@ -20,13 +21,16 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 def whoami(access_token: AccessTokenDep, db_session: DBSessionDep):
     user_id = str(access_token.get("sub"))
     user = db_session.execute(
-        select(User).where(User.id == user_id)
+        select(User).options(selectinload(User.role)).where(User.id == user_id)
     ).scalar_one_or_none()
-    if user:
+    if user and user.role:
         res = UserSchema.model_validate(user)
         return APIResponse.ok(data=res)
     else:
-        return APIResponse.error(ErrorCode.INVALID_CREDENTIALS)
+        return APIResponse.error(
+            ErrorCode.INVALID_CREDENTIALS,
+            message=f"Invalid credentials. {type(user)}{type(user.role)}",
+        )
 
 
 @router.post("/register/request", response_model=ResponseSuccessSchema[None])

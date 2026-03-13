@@ -1,4 +1,10 @@
-from .infrastructure_dep import DBEngineDep, DBSessionDep, RedisDep, S3Dep
+from .infrastructure_dep import (
+    DBEngineDep,
+    DBSessionDep,
+    RedisDep,
+    S3Dep,
+    get_db_session,
+)
 from .service_dep import (
     AuthServiceDep,
     JWTServiceDep,

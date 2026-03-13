@@ -68,7 +68,7 @@ class JWTCookie:
                 else:
                     raise AppException(
                         ErrorCode.UNAUTHORIZED,
-                        "Require JWT Access Cookie" + type(access_token).__name__,
+                        "Require JWT Access Cookie",
                     )
             return jwt_service.validate_access_token(
                 access_token, require_fresh=self.fresh

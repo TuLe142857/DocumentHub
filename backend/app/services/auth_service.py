@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core import AppException, ErrorCode, get_db_engine
+from app.core import AppException, ErrorCode
 from app.models import *
 from app.tasks import send_email_task
 from app.utils import generate_otp, render_template
@@ -34,7 +34,7 @@ class AuthService:
         )
 
     def request_registration(self, email: str):
-        if User.get_by_identity(self.db_session, email) is not None:
+        if User.get_by_identity(email, self.db_session) is not None:
             raise AppException(
                 ErrorCode.RESOURCE_ALREADY_EXISTS, "Email already exists"
             )
@@ -79,8 +79,8 @@ class AuthService:
 
         # check email & username already exist
         if (
-            User.get_by_identity(self.db_session, username) is not None
-            or User.get_by_identity(self.db_session, email) is not None
+            User.get_by_identity(username, self.db_session) is not None
+            or User.get_by_identity(email, self.db_session) is not None
         ):
             raise AppException(
                 ErrorCode.RESOURCE_ALREADY_EXISTS, "Username or Email already exists"
@@ -88,11 +88,11 @@ class AuthService:
 
         # add new user
         try:
-            role_user_id = Role.get_or_create("USER", get_db_engine())
+            role_user = Role.get_or_create("USER", self.db_session)
             new_user = User(
                 email=email,
                 username=username,
-                role_id=role_user_id,
+                role=role_user,
                 profile=UserProfile(),
             )
             new_user.set_password(password)
@@ -116,7 +116,7 @@ class AuthService:
         Returns: tuple[str, str]: access_token, refresh_token
 
         """
-        user = User.get_by_identity(self.db_session, identity)
+        user = User.get_by_identity(identity, self.db_session)
         if not user or not user.verify_password(password):
             raise AppException(
                 ErrorCode.LOGIN_FAILED, "identity or password is invalid"
@@ -152,7 +152,7 @@ class AuthService:
         return self.__generate_access_token(user, fresh=False)
 
     def forgot_password(self, identity: str):
-        user = User.get_by_identity(self.db_session, identity)
+        user = User.get_by_identity(identity, self.db_session)
         if not user:
             raise AppException(ErrorCode.INVALID_CREDENTIALS, "User not found")
         self.redis_client.set(
@@ -160,7 +160,7 @@ class AuthService:
         )
 
     def reset_password(self, identity: str, otp_code: str, new_password: str):
-        user = User.get_by_identity(self.db_session, identity)
+        user = User.get_by_identity(identity, self.db_session)
         if not user:
             raise AppException(ErrorCode.INVALID_CREDENTIALS, "User not found")
         otp_key = f"forgot_password_{user.email}"
