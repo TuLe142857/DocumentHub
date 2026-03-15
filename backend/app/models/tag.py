@@ -25,13 +25,14 @@ class Tag(BaseModel):
             tag_in_db = session.execute(
                 select(Tag).where(Tag.name == name)
             ).scalar_one_or_none()
-            if tag_in_db:
+            if tag_in_db is not None:
                 return tag_in_db
 
             try:
                 new_tag = Tag(name=name)
                 session.add(new_tag)
                 session.flush()
+                return new_tag
             except IntegrityError:
                 session.rollback()
                 return session.execute(
