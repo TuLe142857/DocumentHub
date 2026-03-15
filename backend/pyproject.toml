@@ -1,5 +1,5 @@
 [project]
-name = "backend"
+name = "documenthub"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
@@ -9,14 +9,19 @@ dependencies = [
     "cryptography>=46.0.5",
     "fastapi[standard]>=0.135.1",
     "jinja2>=3.1.6",
+    "olefile>=0.47",
     "pwdlib[argon2]>=0.3.0",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
     "pyjwt>=2.11.0",
     "pymysql>=1.1.2",
+    "pypdf>=6.8.0",
+    "python-docx>=1.2.0",
     "python-multipart>=0.0.22",
+    "python-pptx>=1.0.2",
     "redis>=7.2.1",
     "sqlalchemy>=2.0.48",
+    "typer>=0.24.1",
     "uvicorn>=0.41.0",
 ]
 
@@ -29,6 +34,15 @@ dev = [
     "ruff>=0.15.5",
     "watchfiles>=1.1.1",
 ]
+
+[tool.uv]
+package=true
+
+[tool.setuptools]
+packages = ["app", "scripts"]
+
+[project.scripts]
+cli = "scripts:run"
 
 [tool.ruff.lint]
 select = ["I"]

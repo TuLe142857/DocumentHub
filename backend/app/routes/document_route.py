@@ -1,14 +1,10 @@
-from typing import List
-
-from fastapi import APIRouter, Form, UploadFile
-from jinja2.bccache import Bucket
+from fastapi import APIRouter, Form
 
 from app.core import APIResponse, ResponseSuccessSchema, get_settings
 from app.dependencies import (
     AccessTokenDep,
     DocumentServiceDep,
     OptionalAccessTokenDep,
-    S3Dep,
 )
 from app.schemas.request.document_request import *
 from app.schemas.response.document_response import *
@@ -19,6 +15,8 @@ router = APIRouter(prefix="/documents", tags=["Document"])
 @router.get(
     "/supported_types",
     response_model=ResponseSuccessSchema[DocumentSupportedTypeResponse],
+    summary="Get supported document types",
+    description="Get supported document types",
 )
 def get_supported_types():
     res_data = DocumentSupportedTypeResponse(
@@ -29,19 +27,45 @@ def get_supported_types():
 
 @router.get(
     "",
-    response_model=ResponseSuccessSchema,
+    response_model=ResponseSuccessSchema[list[DocumentSummaryResponse]],
     summary="Get documents list of current user",
 )
-def get_document_list(access_token: AccessTokenDep):
+def get_document_list(
+    access_token: AccessTokenDep, document_service: DocumentServiceDep
+):
+    return APIResponse.ok()
+
+
+@router.post("", response_model=ResponseSuccessSchema)
+def upload_document(
+    body: Annotated[DocumentUploadFormRequest, Form(media_type="multipart/form-data")],
+    access_token: AccessTokenDep,
+    document_service: DocumentServiceDep,
+):
+    document_service.create_document(
+        owner_id=int(access_token.get("sub")),
+        title=body.title,
+        category_id=body.category_id,
+        visibility=body.visibility,
+        desc=body.desc,
+        tags=body.tags,
+        file=body.file.file,
+        file_type=body.file_type,
+        content_type=body.file.content_type,
+    )
     return APIResponse.ok()
 
 
 @router.get(
     "/{document_id}",
-    response_model=ResponseSuccessSchema,
+    response_model=ResponseSuccessSchema[DocumentDetailsResponse],
     summary="Get document details",
 )
-def get_document_details(access_token: OptionalAccessTokenDep, document_id: int):
+def get_document_details(
+    access_token: OptionalAccessTokenDep,
+    document_id: int,
+    document_service: DocumentServiceDep,
+):
     # increase document view here
     if access_token:
         # user login
@@ -49,6 +73,16 @@ def get_document_details(access_token: OptionalAccessTokenDep, document_id: int)
     else:
         # guest
         pass
+    return APIResponse.ok()
+
+
+@router.patch("/{document_id}", response_model=ResponseSuccessSchema)
+def update_document(access_token: AccessTokenDep, document_id: int):
+    return APIResponse.ok()
+
+
+@router.delete("/{document_id}", response_model=ResponseSuccessSchema)
+def delete_document(access_token: AccessTokenDep, document_id: int):
     return APIResponse.ok()
 
 
@@ -99,33 +133,4 @@ def like_document(access_token: AccessTokenDep, document_id: int):
     summary="UnLike document",
 )
 def unlike_document(access_token: AccessTokenDep, document_id: int):
-    return APIResponse.ok()
-
-
-@router.post("", response_model=ResponseSuccessSchema)
-def upload_document(
-    body: Annotated[DocumentUploadFormRequest, Form(media_type="multipart/form-data")],
-    s3: S3Dep,
-):
-    import io
-    s3.upload_fileobj(
-        Fileobj=io.BytesIO(body.file.file.read()),
-        Bucket="documents",
-        Key=body.title,
-        ExtraArgs={
-            "ContentType": body.file.content_type
-        },
-    )
-    body.file.file.seek(0)
-    data = body.model_dump(exclude=("file", ))
-    return APIResponse.ok(message=f"{type(body.file)}", data=data)
-
-
-@router.put("/{document_id}", response_model=ResponseSuccessSchema)
-def update_document(access_token: AccessTokenDep, document_id: int):
-    return APIResponse.ok()
-
-
-@router.delete("/{document_id}", response_model=ResponseSuccessSchema)
-def delete_document(access_token: AccessTokenDep, document_id: int):
     return APIResponse.ok()

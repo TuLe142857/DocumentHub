@@ -7,7 +7,7 @@ class VerifyRegistrationResponse(BaseModel):
     registration_token: Annotated[str, Field()]
 
 
-class SelfProfileResponse(BaseModel):
+class SelfInfoResponse(BaseModel):
     """
     Response for /api/auth/whoami
     """

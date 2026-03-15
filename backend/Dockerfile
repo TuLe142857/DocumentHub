@@ -8,7 +8,7 @@ ARG GID=1000
 
 # install curl for running healthcheck in docker-compose
 RUN apt update && \
-    apt full-upgrade -y && \
+    apt upgrade -y && \
     apt install curl -y
 
 # Create app user

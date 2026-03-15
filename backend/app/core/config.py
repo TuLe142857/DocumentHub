@@ -84,6 +84,11 @@ class Settings(BaseSettings):
     S3_ACCESS_KEY: str
     S3_SECRET_KEY: SecretStr
 
+    S3_DOCUMENTS_BUCKET: str = "documents"
+    S3_IMAGES_BUCKET: str = "images"
+
+    GOTENBERG_ENDPOINT: str
+
     @model_validator(mode="after")
     def validate_secret_variable(self):
         if self.ENVIRONMENT == "dev":

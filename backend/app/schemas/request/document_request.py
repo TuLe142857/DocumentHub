@@ -3,27 +3,27 @@ from typing import Annotated, Any
 from fastapi import File, HTTPException, UploadFile
 from pydantic import AfterValidator, BaseModel, Field, computed_field, field_validator
 
-from app.schemas.validate import validate_file, validate_tag_name_list
-from app.utils import get_file_extension, sha256_checksum, md5_checksum
-
 from app.models import DocumentVisibility
+from app.schemas.validate import validate_file, validate_tag_name_list
+from app.utils import get_file_extension, get_page_count, md5_checksum, sha256_checksum
+
 
 class DocumentUploadFormRequest(BaseModel):
     file: Annotated[UploadFile, Field(), AfterValidator(validate_file)]
 
-
     title: Annotated[str, Field()]
     category_id: Annotated[int, Field()]
     visibility: Annotated[DocumentVisibility, Field(default=DocumentVisibility.PUBLIC)]
-    desc: Annotated[str|None, Field(default=None)]
+    desc: Annotated[str | None, Field(default=None)]
 
-    tags: Annotated[list[str], Field(), AfterValidator(validate_tag_name_list)]
+    tags: Annotated[
+        list[str], Field(default=[]), AfterValidator(validate_tag_name_list)
+    ]
 
     @computed_field
     @property
-    def file_extension(self) -> str:
+    def file_type(self) -> str:
         return get_file_extension(self.file.filename)
-
 
     @computed_field
     @property

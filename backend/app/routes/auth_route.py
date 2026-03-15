@@ -17,14 +17,18 @@ from app.schemas.user_schema import UserSchema
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.get("/whoami", response_model=ResponseSuccessSchema[SelfProfileResponse])
+@router.get(
+    "/whoami",
+    response_model=ResponseSuccessSchema[SelfInfoResponse],
+    summary="Get self info(require login)",
+)
 def whoami(access_token: AccessTokenDep, db_session: DBSessionDep):
     user_id = str(access_token.get("sub"))
     user = db_session.execute(
         select(User).options(selectinload(User.role)).where(User.id == user_id)
     ).scalar_one_or_none()
     if user:
-        res = SelfProfileResponse.model_validate(user)
+        res = SelfInfoResponse.model_validate(user)
         return APIResponse.ok(data=res)
     else:
         return APIResponse.error(
@@ -33,14 +37,20 @@ def whoami(access_token: AccessTokenDep, db_session: DBSessionDep):
         )
 
 
-@router.post("/register/request", response_model=ResponseSuccessSchema[None])
+@router.post(
+    "/register/request",
+    response_model=ResponseSuccessSchema[None],
+    summary="Request registration, provide email to get otp code",
+)
 def request_registration(json_body: RegistrationRequest, auth_service: AuthServiceDep):
     auth_service.request_registration(**json_body.model_dump())
     return APIResponse.ok()
 
 
 @router.post(
-    "/register/verify", response_model=ResponseSuccessSchema[VerifyRegistrationResponse]
+    "/register/verify",
+    response_model=ResponseSuccessSchema[VerifyRegistrationResponse],
+    summary="Verify by otp code received from email",
 )
 def verify_registration(body: VerifyRegistrationRequest, auth_service: AuthServiceDep):
     registration_token = auth_service.verify_registration(**body.model_dump())
@@ -51,7 +61,7 @@ def verify_registration(body: VerifyRegistrationRequest, auth_service: AuthServi
 @router.post(
     "/register/complete",
     response_model=ResponseSuccessSchema,
-    description="Complete registration and automatic login",
+    summary="Complete registration and automatic login",
 )
 def complete_registration(
     body: CompleteRegistrationRequest, auth_service: AuthServiceDep
@@ -84,20 +94,28 @@ def logout():
 @router.post(
     "/refresh",
     response_model=ResponseSuccessSchema,
-    description="Require refresh token cookie",
+    summary="Refresh Access Token",
 )
 def refresh_access_token(refresh_token: RefreshTokenDep, auth_service: AuthServiceDep):
     access_token = auth_service.refresh_access_token(refresh_token)
     return APIResponse.ok().set_access_cookie(access_token)
 
 
-@router.post("/forgot_password", response_model=ResponseSuccessSchema)
+@router.post(
+    "/forgot_password",
+    response_model=ResponseSuccessSchema,
+    summary="Forgot password, get otp from mail",
+)
 def forgot_password(body: ForgotPasswordRequest, auth_service: AuthServiceDep):
     auth_service.forgot_password(**body.model_dump())
     return APIResponse.ok()
 
 
-@router.post("/reset_password", response_model=ResponseSuccessSchema)
+@router.post(
+    "/reset_password",
+    response_model=ResponseSuccessSchema,
+    summary="Reset password by otp from mail",
+)
 def reset_password(body: ResetPasswordRequest, auth_service: AuthServiceDep):
     auth_service.reset_password(**body.model_dump())
     return APIResponse.ok()

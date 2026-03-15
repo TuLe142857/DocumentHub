@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import HTTPException, RequestValidationError
 from sqlalchemy.exc import IntegrityError
 
+from .config import get_settings
 from .error_code import ErrorCode
 from .response import APIResponse
 
@@ -67,4 +68,8 @@ def register_exception_handlers(app: FastAPI) -> None:
         import logging
 
         logging.exception(exc)
-        return APIResponse.error(ErrorCode.UNKNOWN_ERROR, "Something went wrong :)")
+        if get_settings().ENVIRONMENT == "prod":
+            message = str(exc)
+        else:
+            message = "Something went wrong"
+        return APIResponse.error(ErrorCode.UNKNOWN_ERROR, message)

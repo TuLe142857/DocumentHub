@@ -14,8 +14,8 @@ class JWTCookie:
     Example:
         @router.get("/require_jwt_token")
         def func(
-            jwt_access_payload: Annotated[dict, Depends(JWTCookie(fresh=True))],
-            jwt_refresh_payload: Annotated[dict, Depends(JWTCookie(refresh=True))],
+            jwt_access_payload: Annotated[dict[str, Any], Depends(JWTCookie(fresh=True))],
+            jwt_refresh_payload: Annotated[dict[str, Any], Depends(JWTCookie(refresh=True))],
         ):
             pass
     """
@@ -50,6 +50,8 @@ class JWTCookie:
         Returns: payload as dict.
 
         """
+
+        # Refresh Token
         if self.refresh:
             refresh_token = request.cookies.get(get_settings().JWT_REFRESH_COOKIE_NAME)
             if not refresh_token:
@@ -60,6 +62,8 @@ class JWTCookie:
                         ErrorCode.UNAUTHORIZED, "Require JWT Refresh Cookie"
                     )
             return jwt_service.validate_refresh_token(refresh_token)
+
+        # Access Token
         else:
             access_token = request.cookies.get(get_settings().JWT_ACCESS_COOKIE_NAME)
             if not access_token:
@@ -75,16 +79,16 @@ class JWTCookie:
             )
 
 
-# Require access token
+# Require access token (payload)
 AccessTokenDep = Annotated[dict[str, Any], Depends(JWTCookie())]
 
-# Require fresh access token
+# Require fresh access token (payload)
 FreshAccessTokenDep = Annotated[dict[str, Any], Depends(JWTCookie(fresh=True))]
 
-# Access token payload or None
+# Access token (payload) or None
 OptionalAccessTokenDep = Annotated[
     dict[str, Any] | None, Depends(JWTCookie(optional=True))
 ]
 
-# Require refresh token
+# Require refresh token (payload)
 RefreshTokenDep = Annotated[dict[str, Any], Depends(JWTCookie(refresh=True))]

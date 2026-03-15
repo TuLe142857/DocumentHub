@@ -4,8 +4,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from app.core import get_db_engine
 from app.dependencies import get_db_session
+from app.infrastructure import get_db_engine
 from app.main import celery_worker, create_app
 from app.models import *
 

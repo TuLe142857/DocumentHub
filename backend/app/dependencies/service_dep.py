@@ -31,8 +31,14 @@ def get_auth_service(
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 
 
-def get_document_service() -> DocumentService:
-    pass
+def get_document_service(
+    s3_client: S3Dep, redis_client: RedisDep, db_session: DBSessionDep
+) -> DocumentService:
+    return DocumentService(
+        db_session=db_session,
+        redis_client=redis_client,
+        s3_client=s3_client,
+    )
 
 
 DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]

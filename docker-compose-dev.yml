@@ -16,6 +16,7 @@ services:
       - ./backend/uv.lock:/app/uv.lock
       - ./backend/test_reports/:/app/test_reports/
       - ./backend/tests/:/app/tests/
+      - ./backend/scripts:/app/scripts/
     ports:
       - "${BACKEND_PORT_EXTERNAL:-8000}:8000"
 
@@ -77,6 +78,12 @@ services:
       - "${MAIL_HOG_SERVER_PORT_EXTERNAL:-1025}:1025"
       - "${MAIL_HOG_CONSOLE_PORT_EXTERNAL:-8025}:8025"
 
+  gotenberg:
+    ports:
+      - "${GOTENBER_PORT_EXTERNAL:-3000}:3000"
+    environment:
+      API_ENABLE_DEBUG_ROUTE: true
+      LIBREOFFICE_AUTO_START: true
 volumes:
   db_data_dev:
   redis_data_dev:
