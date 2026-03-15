@@ -1,7 +1,8 @@
 from functools import lru_cache
 import json
-from typing import Any
+from typing import Annotated, Any
 
+from fastapi import Depends
 import httpx
 
 from app.core import AppException, ErrorCode, get_settings
@@ -28,7 +29,7 @@ class Gotenberg:
         files = {"downloadFrom": (None, download_from_json)}
 
         try:
-            with httpx.Client() as client:
+            with httpx.Client(timeout=300) as client:
                 response = client.post(
                     f"{self.api_endpoint}/forms/libreoffice/convert", files=files
                 )
@@ -44,3 +45,6 @@ class Gotenberg:
 def get_gotenberg() -> Gotenberg:
     settings = get_settings()
     return Gotenberg(settings.GOTENBERG_ENDPOINT)
+
+
+GotenbergDep = Annotated[Gotenberg, Depends(get_gotenberg)]

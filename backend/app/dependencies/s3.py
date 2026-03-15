@@ -1,6 +1,8 @@
 from functools import lru_cache
+from typing import Annotated
 
 import boto3
+from fastapi import Depends
 from mypy_boto3_s3 import S3Client
 
 from app.core import get_settings
@@ -16,3 +18,6 @@ def get_s3() -> S3Client:
         aws_secret_access_key=settings.S3_SECRET_KEY.get_secret_value(),
         endpoint_url=settings.S3_ENDPOINT,
     )
+
+
+S3Dep = Annotated[S3Client, Depends(get_s3)]

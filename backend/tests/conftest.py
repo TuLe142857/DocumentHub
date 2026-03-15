@@ -4,8 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from app.dependencies import get_db_session
-from app.infrastructure import get_db_engine
+from app.dependencies import get_db_engine, get_db_session
 from app.main import celery_worker, create_app
 from app.models import *
 
@@ -28,7 +27,7 @@ def db_engine():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    BaseModel.metadata.create_all(engine)
+    ORMBase.metadata.create_all(engine)
     return engine
 
 

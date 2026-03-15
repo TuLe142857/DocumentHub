@@ -1,7 +1,8 @@
 import pytest
 from pytest_mock import MockFixture
 
-from tests.utils.api_assertions import *
+from app.core import ErrorCode
+from tests.utils.api_assertions import assert_response_error, assert_response_ok
 
 
 @pytest.fixture

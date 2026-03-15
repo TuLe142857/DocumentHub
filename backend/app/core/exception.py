@@ -68,7 +68,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         import logging
 
         logging.exception(exc)
-        if get_settings().ENVIRONMENT == "prod":
+        if get_settings().ENVIRONMENT == "dev":
             message = str(exc)
         else:
             message = "Something went wrong"

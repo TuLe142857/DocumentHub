@@ -22,7 +22,7 @@ from sqlalchemy import (
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
-from .base_model import BaseModel
+from .base import ORMBase
 
 password_hash = PasswordHash((Argon2Hasher(),))
 
@@ -33,7 +33,7 @@ class Gender(enum.Enum):
     OTHER = "OTHER"
 
 
-class Role(BaseModel):
+class Role(ORMBase):
     __tablename__ = "roles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -73,7 +73,7 @@ class Role(BaseModel):
                 ).scalar_one_or_none()
 
 
-class User(BaseModel):
+class User(ORMBase):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -129,7 +129,7 @@ class User(BaseModel):
         ).scalar_one_or_none()
 
 
-class UserProfile(BaseModel):
+class UserProfile(ORMBase):
     __tablename__ = "user_profiles"
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id"), primary_key=True

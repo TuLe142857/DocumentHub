@@ -1,25 +1,33 @@
-from typing import Any
+from typing import Annotated, Any
 
+from fastapi import Depends
 from redis import Redis
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode
+from app.dependencies import DBSessionDep, RedisDep
 from app.models import *
 from app.tasks import send_email_task
 from app.utils import generate_otp, render_template
 
-from .jwt_service import JWTService
+from .jwt_service import JWTService, JWTServiceDep
+from .mail_service import MailService, MailServiceDep
 
 
 class AuthService:
     def __init__(
-        self, jwt_service: JWTService, redis_client: Redis, db_session: Session
+        self,
+        jwt_service: JWTService,
+        redis_client: Redis,
+        db_session: Session,
+        mail_service: MailService,
     ):
         self.jwt_service = jwt_service
         self.redis_client = redis_client
         self.db_session = db_session
+        self.mail_service = mail_service
 
     def __generate_access_token(self, user: User, fresh: bool = True) -> str:
         additional_claim = None
@@ -33,6 +41,47 @@ class AuthService:
             sub=str(user.id), claim=additional_claim
         )
 
+    def get_user_id(
+        self,
+        token_payload: dict[str, Any],
+        required_active: bool = False,
+        require_role: str | None = None,
+    ) -> int:
+        """
+        get user id from jwt token payload
+        Args:
+            require_role: check user role match role name
+            required_active: check user is active
+            token_payload: access/refresh token payload as dict[str, Any]
+
+        Returns: user id
+        """
+        if not token_payload.get("sub"):
+            raise AppException(
+                ErrorCode.INVALID_JWT_TOKEN,
+                "JWT token is invalid.(Require 'sub' in token payload)",
+            )
+        user_id = int(token_payload["sub"])
+
+        if (not required_active) or (require_role is None):
+            return user_id
+
+        user: User = self.db_session.execute(
+            select(User).where(User.id == user_id)
+        ).scalar_one_or_none()
+
+        if user is None:
+            raise AppException(ErrorCode.INVALID_CREDENTIALS, "User not found")
+
+        if required_active and not user.is_active:
+            raise AppException(ErrorCode.USER_IS_IN_ACTIVE)
+
+        if (require_role is not None) and (
+            require_role.strip().lower() != user.role.name.lower()
+        ):
+            raise AppException(ErrorCode.FORBIDDEN, "Role mismatch")
+        return user_id
+
     def request_registration(self, email: str):
         if User.get_by_identity(email, self.db_session) is not None:
             raise AppException(
@@ -40,11 +89,14 @@ class AuthService:
             )
 
         otp_code = generate_otp()
-        send_email_task.delay(
-            to=email,
-            subject="Registration request",
-            html_content=render_template("mail", {"otp_code": otp_code}),
-            plain_content=f"otp_code: {otp_code}",
+        # send_email_task.delay(
+        #     to=email,
+        #     subject="Registration request",
+        #     html_content=render_template("mail", {"otp_code": otp_code}),
+        #     plain_content=f"otp_code: {otp_code}",
+        # )
+        self.mail_service.send_registration_otp_email(
+            to=email, otp_code=otp_code, otp_expire_minutes=5
         )
         self.redis_client.set(f"verify_regis_{email}", otp_code, ex=5 * 60)
 
@@ -170,3 +222,15 @@ class AuthService:
         user.set_password(new_password)
         self.db_session.commit()
         self.redis_client.delete(otp_key)
+
+
+def get_auth_service(
+    jwt_service: JWTServiceDep,
+    redis_client: RedisDep,
+    db_session: DBSessionDep,
+    mail_service: MailServiceDep,
+) -> AuthService:
+    return AuthService(jwt_service, redis_client, db_session, mail_service)
+
+
+AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]

@@ -9,26 +9,27 @@ db_cli = typer.Typer(help="database cli")
 @db_cli.command(name="inspect", short_help="Inspect ORM")
 def inspect():
     from sqlalchemy.schema import CreateTable
-    from app.models import BaseModel
 
-    for table in BaseModel.metadata.sorted_tables:
+    from app.models import ORMBase
+
+    for table in ORMBase.metadata.sorted_tables:
         typer.echo(CreateTable(table))
 
 
 @db_cli.command(name="drop", help="drop all tables")
 def drop_database():
-    from app.infrastructure import get_db_engine
-    from app.models import BaseModel
+    from app.dependencies import get_db_engine
+    from app.models import ORMBase
 
-    BaseModel.metadata.drop_all(get_db_engine())
+    ORMBase.metadata.drop_all(get_db_engine())
 
 
 @db_cli.command(name="create", help="create all tables")
 def create_database():
-    from app.infrastructure import get_db_engine
-    from app.models import BaseModel
+    from app.dependencies import get_db_engine
+    from app.models import ORMBase
 
-    BaseModel.metadata.create_all(get_db_engine())
+    ORMBase.metadata.create_all(get_db_engine())
 
 
 @db_cli.command(name="seed", help="Seed database")
@@ -40,17 +41,17 @@ def seed_database(
 ):
     from sqlalchemy.exc import IntegrityError
 
-    from app.infrastructure import get_db_engine
-    from app.models import BaseModel, Category, Role, User, UserProfile
+    from app.dependencies import get_db_engine
+    from app.models import Category, ORMBase, Role, User, UserProfile
 
     engine = get_db_engine()
 
     if drop:
         typer.secho("Dropping all tables", fg=typer.colors.BLUE)
-        BaseModel.metadata.drop_all(engine)
+        ORMBase.metadata.drop_all(engine)
 
         typer.secho("Creating all tables", fg=typer.colors.BLUE)
-        BaseModel.metadata.create_all(engine)
+        ORMBase.metadata.create_all(engine)
 
     typer.secho("Seeding database", fg=typer.colors.BLUE)
     with Session(engine) as session:
@@ -92,7 +93,7 @@ def seed_database(
 
             typer.secho("Commit", fg=typer.colors.BLUE)
             session.commit()
-        except IntegrityError as e:
+        except IntegrityError:
             typer.secho(
                 "Some thing went wrong, rollback all things", fg=typer.colors.RED
             )

@@ -1,0 +1,2 @@
+class CRUDBase:
+    pass

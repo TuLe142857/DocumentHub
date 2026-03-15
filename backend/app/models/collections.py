@@ -4,10 +4,10 @@ from typing import List
 from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base_model import BaseModel
+from .base import ORMBase
 
 
-class Collection(BaseModel):
+class Collection(ORMBase):
     __tablename__ = "collections"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -22,7 +22,7 @@ class Collection(BaseModel):
     )
 
 
-class CollectionItem(BaseModel):
+class CollectionItem(ORMBase):
     __tablename__ = "collection_items"
 
     collection_id: Mapped[int] = mapped_column(

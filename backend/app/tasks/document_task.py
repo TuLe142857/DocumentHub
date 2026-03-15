@@ -9,7 +9,7 @@ from app.core import (
     ErrorCode,
     get_settings,
 )
-from app.infrastructure import (
+from app.dependencies import (
     Gotenberg,
     get_db_engine,
     get_gotenberg,
@@ -64,7 +64,9 @@ def generate_document_preview_task(document_id: int):
         pdf_io = io.BytesIO(pdf_bytes)
 
         s3_client.upload_fileobj(
-            pdf_io, Bucket=settings.S3_DOCUMENTS_BUCKET, Key=document.file_preview_object_key,
+            pdf_io,
+            Bucket=settings.S3_DOCUMENTS_BUCKET,
+            Key=document.file_preview_object_key,
             ExtraArgs={"ContentType": "application/pdf"},
         )
 

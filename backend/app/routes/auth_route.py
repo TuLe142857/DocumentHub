@@ -3,16 +3,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.core import APIResponse, ErrorCode, ResponseErrorSchema, ResponseSuccessSchema
-from app.dependencies import (
-    AccessTokenDep,
-    AuthServiceDep,
-    DBSessionDep,
-    RefreshTokenDep,
-)
+from app.dependencies import DBSessionDep
 from app.models import User
 from app.schemas.request.auth_request import *
 from app.schemas.response.auth_response import *
-from app.schemas.user_schema import UserSchema
+from app.services.auth_service import AuthServiceDep
+from app.services.jwt_service import AccessToken, JWTPayload, RefreshToken
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -22,14 +18,15 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
     response_model=ResponseSuccessSchema[SelfInfoResponse],
     summary="Get self info(require login)",
 )
-def whoami(access_token: AccessTokenDep, db_session: DBSessionDep):
-    user_id = str(access_token.get("sub"))
+def whoami(access_token: AccessToken, db_session: DBSessionDep):
+    user_id = str(access_token.sub)
     user = db_session.execute(
         select(User).options(selectinload(User.role)).where(User.id == user_id)
     ).scalar_one_or_none()
     if user:
         res = SelfInfoResponse.model_validate(user)
-        return APIResponse.ok(data=res)
+
+        return APIResponse.ok(data=access_token.__dict__())
     else:
         return APIResponse.error(
             ErrorCode.INVALID_CREDENTIALS,
@@ -96,8 +93,8 @@ def logout():
     response_model=ResponseSuccessSchema,
     summary="Refresh Access Token",
 )
-def refresh_access_token(refresh_token: RefreshTokenDep, auth_service: AuthServiceDep):
-    access_token = auth_service.refresh_access_token(refresh_token)
+def refresh_access_token(refresh_token: RefreshToken, auth_service: AuthServiceDep):
+    access_token = auth_service.refresh_access_token(refresh_token.__dict__())
     return APIResponse.ok().set_access_cookie(access_token)
 
 

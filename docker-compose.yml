@@ -48,7 +48,7 @@ services:
     environment:
 #      - FRONTEND_ENDPOINT=http://frontend:
       - BACKEND_ENDPOINT=http://backend:8000
-      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ENDPOINT=http://minio:9000/
     volumes:
       - ./docker/nginx/templates:/etc/nginx/templates
     ports:

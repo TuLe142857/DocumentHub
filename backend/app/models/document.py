@@ -2,10 +2,23 @@ import datetime
 import enum
 from typing import List
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, UniqueConstraint, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    Text,
+    UniqueConstraint,
+    func,
+    select,
+)
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
-from .base_model import BaseModel
+from .base import ORMBase
 
 
 class DocumentVisibility(enum.Enum):
@@ -20,11 +33,14 @@ class DocumentStatus(enum.Enum):
     # document ready for select
     READY = "READY"
 
+    # document deleted by owner(soft delete)
+    DELETED = "DELETED"
+
     # banned
     BANNED = "BANNED"
 
 
-class Document(BaseModel):
+class Document(ORMBase):
     __tablename__ = "documents"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -39,7 +55,7 @@ class Document(BaseModel):
     )
     desc: Mapped[str | None] = mapped_column(Text)
     file_type: Mapped[str] = mapped_column(String(10))
-    thumbnail_object_key: Mapped[str | None] = mapped_column(String(100))
+    thumbnail_object_key: Mapped[str] = mapped_column(String(100))
     file_object_key: Mapped[str] = mapped_column(String(128))
     file_preview_object_key: Mapped[str] = mapped_column(String(128))
     sha256sum: Mapped[str | None] = mapped_column(String(256))
@@ -78,3 +94,68 @@ class Document(BaseModel):
     __table_args__ = (
         UniqueConstraint("owner_id", "title", name="unique_document_title"),
     )
+
+
+class Category(ORMBase):
+    __tablename__ = "categories"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(50), unique=True)
+
+    documents: Mapped[List["Document"]] = relationship(back_populates="category")
+
+
+class Tag(ORMBase):
+    __tablename__ = "tags"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(50), unique=True)
+    documents: Mapped[List["Document"]] = relationship(
+        secondary="document_tags", back_populates="tags"
+    )
+
+    @staticmethod
+    def get_or_create(
+        name: str,
+        session: Session,
+    ) -> "Tag | None":
+        with session.begin_nested():
+            tag_in_db = session.execute(
+                select(Tag).where(Tag.name == name)
+            ).scalar_one_or_none()
+            if tag_in_db is not None:
+                return tag_in_db
+
+            try:
+                new_tag = Tag(name=name)
+                session.add(new_tag)
+                session.flush()
+                return new_tag
+            except IntegrityError:
+                session.rollback()
+                return session.execute(
+                    select(Tag).where(Tag.name == name)
+                ).scalar_one_or_none()
+
+
+__document_tags_table__ = Table(
+    "document_tags",
+    ORMBase.metadata,
+    Column("document_id", Integer, ForeignKey("documents.id"), primary_key=True),
+    Column("tag_id", Integer, ForeignKey("tags.id"), primary_key=True),
+)
+
+
+class DocumentLike(ORMBase):
+    __tablename__ = "document_likes"
+
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("documents.id"), primary_key=True
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, server_default=func.now()
+    )
+
+    document: Mapped["Document"] = relationship(back_populates="liked_by")
+    user: Mapped["User"] = relationship(back_populates="liked_documents")

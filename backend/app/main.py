@@ -6,7 +6,7 @@ from app.core import (
     get_settings,
     register_exception_handlers,
 )
-from app.infrastructure import get_db_engine, get_gotenberg, get_redis, get_s3
+from app.dependencies import get_db_engine, get_gotenberg, get_redis, get_s3
 from app.models import *
 from app.routes import api_router
 
@@ -25,7 +25,7 @@ async def custom_lifespan(app_instance: FastAPI):
     get_s3.cache_clear()
     get_gotenberg.cache_clear()
 
-    BaseModel.metadata.create_all(get_db_engine())
+    ORMBase.metadata.create_all(get_db_engine())
     try:
         get_s3().create_bucket(Bucket=get_settings().S3_DOCUMENTS_BUCKET)
     except Exception:
