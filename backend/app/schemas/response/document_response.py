@@ -29,6 +29,7 @@ class DocumentSummaryResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True, extra="ignore")
 
+    id: Annotated[int, Field()]
     title: Annotated[str, Field()]
     visibility: Annotated[DocumentVisibility, Field()]
     status: Annotated[DocumentStatus, Field]
@@ -66,25 +67,21 @@ class DocumentSummaryResponse(BaseModel):
 
     file_type: Annotated[str, Field()]
 
-    file_preview_url: Annotated[
-        str,
-        Field(validation_alias="file_preview_object_key"),
-        BeforeValidator(FILE_URL_VALIDATOR),
-    ]
-
 
 class DocumentDetailsResponse(DocumentSummaryResponse):
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
+
     desc: Annotated[str | None, Field()]
 
     file_original_url: Annotated[
         str,
-        Field(validation_alias=""),
+        Field(validation_alias="file_object_key"),
         BeforeValidator(DocumentSummaryResponse.FILE_URL_VALIDATOR),
     ]
 
     file_preview_url: Annotated[
         str,
-        Field(validation_alias=""),
+        Field(validation_alias="file_preview_object_key"),
         BeforeValidator(DocumentSummaryResponse.FILE_URL_VALIDATOR),
     ]
     sha256sum: Annotated[str, Field()]

@@ -33,7 +33,7 @@ def get_document_list(
     document_service: DocumentServiceDep,
     auth_service: AuthServiceDep,
 ):
-    owner_id = auth_service.get_user_id(access_token.__dict__())
+    owner_id = auth_service.get_user_id(access_token)
     doc_seq = document_service.get_document_by_owner_id(owner_id)
     response_data = [DocumentSummaryResponse.model_validate(_) for _ in doc_seq]
     return APIResponse.ok(data=response_data)
@@ -47,7 +47,7 @@ def upload_document(
     auth_service: AuthServiceDep,
 ):
     document_service.create_document(
-        owner_id=auth_service.get_user_id(access_token.__dict__()),
+        owner_id=auth_service.get_user_id(access_token),
         title=body.title,
         category_id=body.category_id,
         visibility=body.visibility,
@@ -70,39 +70,53 @@ def get_document_details(
     document_id: int,
     document_service: DocumentServiceDep,
 ):
-    # increase document view here
-    if access_token:
-        # user login
-        pass
-    else:
-        # guest
-        pass
-    return APIResponse.ok()
+    user_id = int(access_token.sub) if (access_token is not None) else None
+    document = document_service.select_document_by_user(user_id, document_id)
+    if document is None:
+        return APIResponse.error()
+    response_data = DocumentDetailsResponse.model_validate(document)
+    return APIResponse.ok(data=response_data)
 
 
-@router.patch("/{document_id}", response_model=ResponseSuccessSchema)
-def update_document(access_token: AccessToken, document_id: int):
-    return APIResponse.ok()
+@router.patch("/{document_id}", response_model=ResponseSuccessSchema[DocumentUpdateRequest])
+def update_document(access_token: AccessToken, document_id: int, body: DocumentUpdateRequest, document_service: DocumentServiceDep):
+    update_data = body.model_dump(exclude_unset=True)
+    document_service.update_document(user_id=int(access_token.sub), document_id=document_id, update_data=update_data)
+    return APIResponse.ok(data=update_data)
 
 
-@router.delete("/{document_id}", response_model=ResponseSuccessSchema)
-def delete_document(access_token: FreshAccessToken, document_id: int):
+@router.delete(
+    "/{document_id}",
+    response_model=ResponseSuccessSchema,
+    summary="Soft Delete document",
+    description="Move the document to the trash. Items in the trash are permanently deleted after 30 days, but can be restored anytime before that.",
+)
+def delete_document(
+    access_token: FreshAccessToken,
+    document_id: int,
+    document_service: DocumentServiceDep,
+):
+    document_service.soft_delete_document(document_id=document_id, user_id=int(access_token.sub))
     return APIResponse.ok()
 
 
 @router.get(
-    "/{document_id}/download",
-    response_model=ResponseSuccessSchema,
-    summary="Download document",
+    "/trash", response_model=ResponseSuccessSchema[list[DocumentSummaryResponse]]
 )
-def download_document(access_token: OptionalAccessToken, document_id: int):
-    # increase document download here
-    if access_token:
-        # user login
-        pass
-    else:
-        # guest
-        pass
+def get_trash(access_token: AccessToken, document_service: DocumentServiceDep):
+
+    documents_in_trash = document_service.get_trash_list(user_id=int(access_token.sub))
+    res = [DocumentSummaryResponse.model_validate(doc) for doc in documents_in_trash]
+    return APIResponse.ok(data=res)
+
+
+@router.post("/{document_id}/restore", response_model=ResponseSuccessSchema)
+def restore_document(
+    access_token: AccessToken,
+    document_id: int,
+    document_service: DocumentServiceDep,
+):
+    document_service.restore_document(document_id=document_id, user_id=int(access_token.sub))
     return APIResponse.ok()
 
 
@@ -111,7 +125,15 @@ def download_document(access_token: OptionalAccessToken, document_id: int):
     response_model=ResponseSuccessSchema,
     summary="Add tag to document",
 )
-def add_tag(access_token: AccessToken, document_id: int, tags: list[str]):
+def add_tag(
+    access_token: AccessToken,
+    document_id: int,
+    tags: list[str],
+    document_service: DocumentServiceDep,
+):
+    document_service.add_tags_to_document(
+        document_id=document_id, user_id=int(access_token.sub), tags=tags
+    )
     return APIResponse.ok()
 
 
@@ -120,14 +142,27 @@ def add_tag(access_token: AccessToken, document_id: int, tags: list[str]):
     response_model=ResponseSuccessSchema,
     summary="Remove tag from document",
 )
-def remove_tag(access_token: AccessToken, document_id: int, tags: list[str]):
+def remove_tag(
+    access_token: AccessToken,
+    document_id: int,
+    tags: list[str],
+    document_service: DocumentServiceDep,
+):
+    document_service.remove_tags_from_document(
+        document_id=document_id, user_id=int(access_token.sub), tags=tags
+    )
     return APIResponse.ok()
 
 
 @router.post(
     "/{document_id}/like", response_model=ResponseSuccessSchema, summary="Like document"
 )
-def like_document(access_token: AccessToken, document_id: int):
+def like_document(
+    access_token: AccessToken, document_id: int, document_service: DocumentServiceDep
+):
+    document_service.like_document(
+        document_id=document_id, user_id=int(access_token.sub)
+    )
     return APIResponse.ok()
 
 
@@ -136,5 +171,10 @@ def like_document(access_token: AccessToken, document_id: int):
     response_model=ResponseSuccessSchema,
     summary="UnLike document",
 )
-def unlike_document(access_token: AccessToken, document_id: int):
+def unlike_document(
+    access_token: AccessToken, document_id: int, document_service: DocumentServiceDep
+):
+    document_service.unlike_document(
+        document_id=document_id, user_id=int(access_token.sub)
+    )
     return APIResponse.ok()

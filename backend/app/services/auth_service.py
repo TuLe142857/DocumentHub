@@ -1,4 +1,4 @@
-from typing import Annotated, Any
+from typing import Annotated, Literal
 
 from fastapi import Depends
 from redis import Redis
@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode
+from app.crud.user import CRUDUser, CRUDUserDep
 from app.dependencies import DBSessionDep, RedisDep
 from app.models import *
 from app.utils import generate_otp
@@ -18,11 +19,13 @@ from .mail_service import MailService, MailServiceDep
 class AuthService:
     def __init__(
         self,
+        crud_user: CRUDUser,
         jwt_service: JWTService,
         redis_client: Redis,
         db_session: Session,
         mail_service: MailService,
     ):
+        self.crud_user = crud_user
         self.jwt_service = jwt_service
         self.redis_client = redis_client
         self.db_session = db_session
@@ -42,32 +45,27 @@ class AuthService:
 
     def get_user_id(
         self,
-        token_payload: dict[str, Any],
-        required_active: bool = False,
-        require_role: str | None = None,
+        jwt_payload: JWTPayload,
+        required_active: bool = True,
+        require_role: Literal["USER", "ADMIN"] | None = None,
     ) -> int:
         """
         get user id from jwt token payload
         Args:
-            require_role: check user role match role name
+            jwt_payload: access/refresh token payload
             required_active: check user is active
-            token_payload: access/refresh token payload as dict[str, Any]
+            require_role: check user role match role name
+
+
 
         Returns: user id
         """
-        if not token_payload.get("sub"):
-            raise AppException(
-                ErrorCode.INVALID_JWT_TOKEN,
-                "JWT token is invalid.(Require 'sub' in token payload)",
-            )
-        user_id = int(token_payload["sub"])
+        user_id = int(jwt_payload.sub)
 
         if (not required_active) or (require_role is None):
             return user_id
 
-        user: User = self.db_session.execute(
-            select(User).where(User.id == user_id)
-        ).scalar_one_or_none()
+        user = self.crud_user.get(user_id)
 
         if user is None:
             raise AppException(ErrorCode.INVALID_CREDENTIALS, "User not found")
@@ -79,10 +77,11 @@ class AuthService:
             require_role.strip().lower() != user.role.name.lower()
         ):
             raise AppException(ErrorCode.FORBIDDEN, "Role mismatch")
+
         return user_id
 
     def request_registration(self, email: str):
-        if User.get_by_identity(email, self.db_session) is not None:
+        if self.crud_user.get_by_identity(email) is not None:
             raise AppException(
                 ErrorCode.RESOURCE_ALREADY_EXISTS, "Email already exists"
             )
@@ -163,7 +162,7 @@ class AuthService:
         Returns: tuple[str, str]: access_token, refresh_token
 
         """
-        user = User.get_by_identity(identity, self.db_session)
+        user = self.crud_user.get_by_identity(identity)
         if not user or not user.verify_password(password):
             raise AppException(
                 ErrorCode.LOGIN_FAILED, "identity or password is invalid"
@@ -175,15 +174,13 @@ class AuthService:
         )
 
     def refresh_access_token(self, user_id: int) -> str:
-        user = self.db_session.execute(
-            select(User).where(User.id == user_id)
-        ).scalar_one_or_none()
+        user = self.crud_user.get(user_id)
         if not user:
             raise AppException(ErrorCode.INVALID_CREDENTIALS, "User ID not found")
         return self.__generate_access_token(user, fresh=False)
 
     def forgot_password(self, identity: str):
-        user = User.get_by_identity(identity, self.db_session)
+        user = self.crud_user.get_by_identity(identity)
         if not user:
             raise AppException(ErrorCode.INVALID_CREDENTIALS, "User not found")
 
@@ -195,7 +192,7 @@ class AuthService:
         )
 
     def reset_password(self, identity: str, otp_code: str, new_password: str):
-        user = User.get_by_identity(identity, self.db_session)
+        user = self.crud_user.get_by_identity(identity)
         if not user:
             raise AppException(ErrorCode.INVALID_CREDENTIALS, "User not found")
 
@@ -212,12 +209,13 @@ class AuthService:
 
 
 def get_auth_service(
+    crud_user: CRUDUserDep,
     jwt_service: JWTServiceDep,
     redis_client: RedisDep,
     db_session: DBSessionDep,
     mail_service: MailServiceDep,
 ) -> AuthService:
-    return AuthService(jwt_service, redis_client, db_session, mail_service)
+    return AuthService(crud_user, jwt_service, redis_client, db_session, mail_service)
 
 
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]

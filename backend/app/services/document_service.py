@@ -1,4 +1,4 @@
-from typing import Annotated, BinaryIO, Sequence
+from typing import Annotated, BinaryIO, Sequence, Any
 import uuid
 
 from fastapi import Depends
@@ -9,14 +9,29 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode, get_settings
+from app.crud.document import CRUDDocument, CRUDDocumentDep
 from app.dependencies import DBSessionDep, RedisDep, S3Dep
 from app.models import *
+from app.services.access_control_service import (
+    AccessControlService,
+    AccessControlServiceDep,
+)
 from app.tasks import generate_document_preview_task
 from app.utils import md5_checksum, sha256_checksum
 
 
 class DocumentService:
-    def __init__(self, db_session: Session, redis_client: Redis, s3_client: S3Client):
+    def __init__(
+        self,
+        crud_doc: CRUDDocument,
+        access_control: AccessControlService,
+        db_session: Session,
+        redis_client: Redis,
+        s3_client: S3Client,
+    ):
+
+        self.crud_doc = crud_doc
+        self.access_control = access_control
         self.db_session = db_session
         self.redis_client = redis_client
         self.s3_client = s3_client
@@ -84,22 +99,70 @@ class DocumentService:
         # call task to generate preview version(pdf) for document
         generate_document_preview_task.delay(document_id=new_document.id)
 
-    # def check_access_permission(self, document_id: int, user_id: int) -> bool:
-    #     document = self.db_session.execute(
-    #         select(Document).where(Document.id == document_id)
-    #     ).scalar_one_or_none()
-    #     if document is None:
-    #         raise AppException(ErrorCode.RESOURCE_NOT_FOUND, "Document not found")
-    #
-    #     if document.sta
-    #
-    #     return True
+    def select_document_by_user(self, user_id: int, document_id: int) -> Document:
+        err = self.access_control.can_view_document(user_id, document_id)
+        if err:
+            raise err
+        return self.db_session.execute(
+            select(Document).where(Document.id == document_id)
+        ).scalar_one_or_none()
+
+    def update_document(self, user_id: int, document_id: int, update_data: dict[str, Any]):
+        err = self.access_control.can_update_document(user_id, document_id)
+        if err:
+            raise err
+        self.crud_doc.update(self.crud_doc.get(document_id), update_data)
+
+    def add_tags_to_document(self, document_id: int, user_id: int, tags: list[str]):
+        err = self.access_control.can_update_document(user_id, document_id)
+        if err:
+            raise err
+        self.crud_doc.add_tags(self.crud_doc.get(document_id), tags)
+
+    def remove_tags_from_document(
+        self, document_id: int, user_id: int, tags: list[str]
+    ):
+        err = self.access_control.can_update_document(user_id, document_id)
+        if err:
+            raise err
+        self.crud_doc.remove_tags(self.crud_doc.get(document_id), tags)
+
+    def like_document(self, document_id: int, user_id: int):
+        err = self.access_control.can_view_document(user_id, document_id)
+        if err:
+            raise err
+        self.crud_doc.add_like(self.crud_doc.get(document_id), user_id)
+
+    def unlike_document(self, document_id: int, user_id: int):
+        err = self.access_control.can_view_document(user_id, document_id)
+        if err:
+            raise err
+        self.crud_doc.remove_like(self.crud_doc.get(document_id), user_id)
+
+    def soft_delete_document(self, document_id: int, user_id: int):
+        err = self.access_control.can_delete_document(user_id, document_id)
+        if err:
+            raise err
+        self.crud_doc.soft_delete(self.crud_doc.get(document_id))
+
+    def get_trash_list(self, user_id: int) -> list[Document]:
+        return self.crud_doc.get_trash_list(user_id)
+
+    def restore_document(self, document_id: int, user_id: int):
+        err = self.access_control.can_view_document(user_id, document_id)
+        if err:
+            raise err
+        self.crud_doc.restore_document_from_trash(self.crud_doc.get(document_id))
 
 
 def get_document_service(
-    db_session: DBSessionDep, redis_client: RedisDep, s3_client: S3Dep
+    crud: CRUDDocumentDep,
+    access_control: AccessControlServiceDep,
+    db_session: DBSessionDep,
+    redis_client: RedisDep,
+    s3_client: S3Dep,
 ) -> DocumentService:
-    return DocumentService(db_session, redis_client, s3_client)
+    return DocumentService(crud, access_control, db_session, redis_client, s3_client)
 
 
 DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]

@@ -16,6 +16,20 @@ def inspect():
         typer.echo(CreateTable(table))
 
 
+@db_cli.command(name="test", help="Test database")
+def test():
+    from app.crud.user import CRUDUser
+    from app.dependencies import get_db_engine
+    from app.models import ORMBase
+
+    engine = get_db_engine()
+    with Session(engine) as session:
+        crud = CRUDUser(session)
+        res = crud.list()
+        print(type(res))
+        print(res[0])
+
+
 @db_cli.command(name="drop", help="drop all tables")
 def drop_database():
     from app.dependencies import get_db_engine

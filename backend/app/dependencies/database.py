@@ -19,7 +19,12 @@ DBEngineDep = Annotated[Engine, Depends(get_db_engine)]
 
 def get_db_session(engine: DBEngineDep):
     with Session(bind=engine) as session:
-        yield session
+        try:
+            yield session
+            session.commit()
+        except:
+            session.rollback()
+            raise  # raise exception for exception handler to catch
 
 
 DBSessionDep = Annotated[Session, Depends(get_db_session)]

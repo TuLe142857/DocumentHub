@@ -1,6 +1,4 @@
 from .base import ORMBase
-
-# from .category import Category
 from .collections import Collection, CollectionItem
 from .document import (
     Category,
@@ -10,9 +8,6 @@ from .document import (
     DocumentVisibility,
     Tag,
 )
-
-# from .like import DocumentLike
-# from .tag import Tag, __document_tags_table__
 from .user import Gender, Role, User, UserProfile
 
 try:
@@ -21,3 +16,19 @@ try:
     configure_mappers()
 except Exception as e:
     raise RuntimeError(f"ORM mapping validation failed: {e}")
+
+__all__ = [
+    "ORMBase",
+    "Collection",
+    "CollectionItem",
+    "Category",
+    "Document",
+    "DocumentLike",
+    "DocumentStatus",
+    "DocumentVisibility",
+    "Tag",
+    "User",
+    "UserProfile",
+    "Gender",
+    "Role",
+]
