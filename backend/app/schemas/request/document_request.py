@@ -1,7 +1,7 @@
 from typing import Annotated, Any
 
 from fastapi import UploadFile
-from pydantic import AfterValidator, BaseModel, Field, computed_field, ConfigDict
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, computed_field
 
 from app.models import DocumentVisibility
 from app.schemas.validate import validate_file, validate_tag_name_list
@@ -34,6 +34,7 @@ class DocumentUploadFormRequest(BaseModel):
     @property
     def md5checksum(self) -> str:
         return md5_checksum(self.file.file)
+
 
 class DocumentUpdateRequest(BaseModel):
     model_config = ConfigDict()

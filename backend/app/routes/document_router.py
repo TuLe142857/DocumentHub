@@ -78,10 +78,19 @@ def get_document_details(
     return APIResponse.ok(data=response_data)
 
 
-@router.patch("/{document_id}", response_model=ResponseSuccessSchema[DocumentUpdateRequest])
-def update_document(access_token: AccessToken, document_id: int, body: DocumentUpdateRequest, document_service: DocumentServiceDep):
+@router.patch(
+    "/{document_id}", response_model=ResponseSuccessSchema[DocumentUpdateRequest]
+)
+def update_document(
+    access_token: AccessToken,
+    document_id: int,
+    body: DocumentUpdateRequest,
+    document_service: DocumentServiceDep,
+):
     update_data = body.model_dump(exclude_unset=True)
-    document_service.update_document(user_id=int(access_token.sub), document_id=document_id, update_data=update_data)
+    document_service.update_document(
+        user_id=int(access_token.sub), document_id=document_id, update_data=update_data
+    )
     return APIResponse.ok(data=update_data)
 
 
@@ -96,7 +105,9 @@ def delete_document(
     document_id: int,
     document_service: DocumentServiceDep,
 ):
-    document_service.soft_delete_document(document_id=document_id, user_id=int(access_token.sub))
+    document_service.soft_delete_document(
+        document_id=document_id, user_id=int(access_token.sub)
+    )
     return APIResponse.ok()
 
 
@@ -116,7 +127,9 @@ def restore_document(
     document_id: int,
     document_service: DocumentServiceDep,
 ):
-    document_service.restore_document(document_id=document_id, user_id=int(access_token.sub))
+    document_service.restore_document(
+        document_id=document_id, user_id=int(access_token.sub)
+    )
     return APIResponse.ok()
 
 

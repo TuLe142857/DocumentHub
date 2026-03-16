@@ -1,4 +1,4 @@
-from typing import Annotated, BinaryIO, Sequence, Any
+from typing import Annotated, Any, BinaryIO, Sequence
 import uuid
 
 from fastapi import Depends
@@ -76,6 +76,7 @@ class DocumentService:
             sha256sum=sha256_checksum(file),
             md5sum=md5_checksum(file),
         )
+        self.db_session.add(new_document)
 
         # remove duplicate
         tags = list(set(tags))
@@ -92,7 +93,7 @@ class DocumentService:
             },
         )
 
-        self.db_session.add(new_document)
+
         self.db_session.commit()
 
         # finish create document & insert to database
@@ -107,7 +108,9 @@ class DocumentService:
             select(Document).where(Document.id == document_id)
         ).scalar_one_or_none()
 
-    def update_document(self, user_id: int, document_id: int, update_data: dict[str, Any]):
+    def update_document(
+        self, user_id: int, document_id: int, update_data: dict[str, Any]
+    ):
         err = self.access_control.can_update_document(user_id, document_id)
         if err:
             raise err

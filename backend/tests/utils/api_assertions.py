@@ -11,20 +11,10 @@ def _get_json_payload(response: Response, print_payload: bool = True) -> dict[st
     try:
         payload = response.json()
         if print_payload:
-            req = response.request
-            req_json = {
-                "method": req.method,
-                "url": str(req.url),
-            }
-            if req.content:
-                req_json["content"] = json.loads(req.content)
-            display_json = {
-                "request": req_json,
-                "response": payload,
-            }
-            print(json.dumps(display_json, indent=2), end="\n\n")
+            print("request: ", response.request)
+            print("response: ", json.dumps(payload, indent=2), end="\n\n")
         return payload
-    except Exception:
+    except:
         pytest.fail(
             f"Response is not valid JSON. Status: {response.status_code}, Body: {response.text}"
         )
