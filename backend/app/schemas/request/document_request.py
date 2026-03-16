@@ -1,11 +1,11 @@
 from typing import Annotated, Any
 
-from fastapi import File, HTTPException, UploadFile
-from pydantic import AfterValidator, BaseModel, Field, computed_field, field_validator
+from fastapi import UploadFile
+from pydantic import AfterValidator, BaseModel, Field, computed_field
 
 from app.models import DocumentVisibility
 from app.schemas.validate import validate_file, validate_tag_name_list
-from app.utils import get_file_extension, get_page_count, md5_checksum, sha256_checksum
+from app.utils import get_file_extension, md5_checksum, sha256_checksum
 
 
 class DocumentUploadFormRequest(BaseModel):

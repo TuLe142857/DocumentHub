@@ -9,10 +9,9 @@ from sqlalchemy.orm import Session
 from app.core import AppException, ErrorCode
 from app.dependencies import DBSessionDep, RedisDep
 from app.models import *
-from app.tasks import send_email_task
-from app.utils import generate_otp, render_template
+from app.utils import generate_otp
 
-from .jwt_service import JWTService, JWTServiceDep
+from .jwt_service import JWTPayload, JWTService, JWTServiceDep
 from .mail_service import MailService, MailServiceDep
 
 
@@ -89,12 +88,6 @@ class AuthService:
             )
 
         otp_code = generate_otp()
-        # send_email_task.delay(
-        #     to=email,
-        #     subject="Registration request",
-        #     html_content=render_template("mail", {"otp_code": otp_code}),
-        #     plain_content=f"otp_code: {otp_code}",
-        # )
         self.mail_service.send_registration_otp_email(
             to=email, otp_code=otp_code, otp_expire_minutes=5
         )
@@ -156,6 +149,8 @@ class AuthService:
         # create user success, delete registration code
         self.redis_client.delete(registration_key)
 
+        self.mail_service.send_registration_complete_email(to=new_user.email)
+
         # return access/refresh token
         return (
             self.__generate_access_token(new_user, fresh=True),
@@ -179,23 +174,7 @@ class AuthService:
             self.__generate_refresh_token(user),
         )
 
-    def refresh_access_token(self, refresh_token: dict[str, Any] | str) -> str:
-        """
-        If `refresh_token` is instance of `str`, this method will decode & validate it to payload.
-        If `refresh_token` is instance of `dict[str, Any]`, this method with read it as refresh_token_payload.
-        Args:
-            refresh_token (dict[str, Any] | str): refresh_token(str) or refresh_token_payload(dict[str, Any])
-
-        Returns: new access token
-
-        """
-        if isinstance(refresh_token, dict):
-            user_id = int(refresh_token.get("sub"))
-        else:
-            refresh_token_payload = self.jwt_service.validate_refresh_token(
-                refresh_token
-            )
-            user_id = int(refresh_token_payload.get("sub"))
+    def refresh_access_token(self, user_id: int) -> str:
         user = self.db_session.execute(
             select(User).where(User.id == user_id)
         ).scalar_one_or_none()
@@ -207,21 +186,29 @@ class AuthService:
         user = User.get_by_identity(identity, self.db_session)
         if not user:
             raise AppException(ErrorCode.INVALID_CREDENTIALS, "User not found")
-        self.redis_client.set(
-            f"forgot_password_{user.email}", generate_otp(), ex=5 * 60
+
+        otp_key = f"forgot_password_{user.email}"
+        otp_code = generate_otp()
+        self.redis_client.set(otp_key, otp_code, ex=5 * 60)
+        self.mail_service.send_forgot_password_otp_email(
+            to=user.email, otp_code=otp_code, otp_expire_minutes=5
         )
 
     def reset_password(self, identity: str, otp_code: str, new_password: str):
         user = User.get_by_identity(identity, self.db_session)
         if not user:
             raise AppException(ErrorCode.INVALID_CREDENTIALS, "User not found")
+
         otp_key = f"forgot_password_{user.email}"
         otp_in_cache = self.redis_client.get(otp_key)
         if not otp_in_cache or otp_in_cache.decode() != otp_code:
             raise AppException(ErrorCode.INVALID_CODE, "Invalid OTP")
+
         user.set_password(new_password)
         self.db_session.commit()
+
         self.redis_client.delete(otp_key)
+        self.mail_service.send_reset_password_complete_email(to=user.email)
 
 
 def get_auth_service(

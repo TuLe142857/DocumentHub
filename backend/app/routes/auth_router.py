@@ -94,7 +94,7 @@ def logout():
     summary="Refresh Access Token",
 )
 def refresh_access_token(refresh_token: RefreshToken, auth_service: AuthServiceDep):
-    access_token = auth_service.refresh_access_token(refresh_token.__dict__())
+    access_token = auth_service.refresh_access_token(int(refresh_token.sub))
     return APIResponse.ok().set_access_cookie(access_token)
 
 

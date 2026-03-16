@@ -7,8 +7,11 @@ __templates_dir = os.path.join(__base_dir, "..", "templates")
 __env = Environment(loader=FileSystemLoader(__templates_dir))
 
 
-def render_template(template_name: str, context: dict) -> str:
+def render_template(template_name: str, context: dict | None = None) -> str:
     if not template_name.endswith(".html"):
         template_name = template_name + ".html"
     template = __env.get_template(template_name)
-    return template.render(context)
+    if context is None:
+        return template.render()
+    else:
+        return template.render(context)
