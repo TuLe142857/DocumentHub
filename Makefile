@@ -27,8 +27,7 @@ clean:
 
 enter:
 	$(if $(service), , $(error No service provided))
-	$(if $(command), , $(error No command provided))
-	$(DC_EXEC) $(service) $(command)
+	$(DC_EXEC) $(service) $(or $(command),bash)
 
 enter-backend:
 	$(DC_EXEC) backend bash
