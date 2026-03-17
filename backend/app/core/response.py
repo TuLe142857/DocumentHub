@@ -13,7 +13,7 @@ T = TypeVar("T")
 
 
 class ResponseSuccessSchema(BaseModel, Generic[T]):
-    success: Annotated[Literal[True], Field("Always true for success response")]
+    success: Annotated[Literal[True], Field(description="Always true for success response")]
     data: Annotated[T, Field(description="Response data")]
     message: Annotated[
         str | None, Field(description="Optional, message to display to user")
