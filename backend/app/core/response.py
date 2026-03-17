@@ -13,7 +13,9 @@ T = TypeVar("T")
 
 
 class ResponseSuccessSchema(BaseModel, Generic[T]):
-    success: Annotated[Literal[True], Field(description="Always true for success response")]
+    success: Annotated[
+        Literal[True], Field(description="Always true for success response")
+    ]
     data: Annotated[T, Field(description="Response data")]
     message: Annotated[
         str | None, Field(description="Optional, message to display to user")
@@ -33,7 +35,7 @@ class ResponseErrorSchema(BaseModel):
 # For pagination
 class PaginationMeta(BaseModel):
     """
-    Docs...
+    Class provide pagination metadata
     """
 
     current_page: Annotated[int, Field(ge=0, description="Current page number")]
@@ -48,11 +50,11 @@ class PaginationMeta(BaseModel):
 
 class ResponsePaginationSchema(ResponseSuccessSchema, Generic[T]):
     """
-    Docs....
+    Custom response class to return list objects with pagination.
     """
 
-    data: Sequence[T]
-    meta: PaginationMeta
+    data: Annotated[Sequence[T], Field(description="List of object")]
+    meta: Annotated[PaginationMeta, Field(description="Pagination metadata")]
 
 
 class APIResponse(JSONResponse):

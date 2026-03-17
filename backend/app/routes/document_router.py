@@ -2,7 +2,7 @@ from fastapi import APIRouter, Form, Query
 
 from app.core import (
     APIResponse,
-    PaginationParamsDep,
+    PaginationQueryDep,
     ResponsePaginationSchema,
     ResponseSuccessSchema,
     get_settings,
@@ -56,7 +56,7 @@ def get_document_list(
     access_token: AccessToken,
     document_service: DocumentServiceDep,
     auth_service: AuthServiceDep,
-    pagination: PaginationParamsDep,
+    pagination: PaginationQueryDep,
 ):
     owner_id = auth_service.get_user_id(access_token)
 
