@@ -25,7 +25,7 @@ def test():
     engine = get_db_engine()
     with Session(engine) as session:
         crud = CRUDUser(session)
-        res = crud.list()
+        res, count = crud.get_multi()
         print(type(res))
         print(res[0])
 

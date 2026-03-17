@@ -1,7 +1,7 @@
-from typing import Any, Generic, Type, TypeVar
+from typing import Any, Generic, Sequence, Type, TypeVar
 
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import ORMBase
@@ -57,10 +57,41 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             raise on_not_found
         return db_obj
 
-    def list(self, *, skip: int = 0, limit: int = 100):
-        return self.db_session.execute(
-            select(self.model).offset(skip).limit(limit)
-        ).all()
+    def get_multi(
+        self,
+        *where,
+        skip: int = 0,
+        limit: int = 100,
+        order_by: Any = None,
+        filter_by: dict[str, Any] = None,
+    ) -> tuple[Sequence[ModelType], int]:
+
+        # Build base statement(not include pagination & order logic)
+        stmt = select(self.model)
+        if where:
+            stmt = stmt.where(*where)
+        if filter_by:
+            stmt = stmt.filter_by(**filter_by)
+
+        total_count = (
+            self.db_session.execute(
+                select(func.count()).select_from(stmt.subquery())
+            ).scalar()
+            or 0
+        )
+
+        if total_count == 0:
+            return [], 0
+
+        if order_by is not None:
+            if isinstance(order_by, (list, tuple)):
+                stmt = stmt.order_by(*order_by)
+            else:
+                stmt = stmt.order_by(order_by)
+
+        items = self.db_session.execute(stmt.offset(skip).limit(limit)).scalars().all()
+
+        return items, total_count
 
     def create(
         self,

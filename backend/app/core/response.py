@@ -1,9 +1,9 @@
 from datetime import datetime
-from typing import Any, Generic, Literal, Mapping, TypeVar
+from typing import Annotated, Any, Generic, Literal, Mapping, Sequence, TypeVar
 
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
 from .config import get_settings
@@ -13,15 +13,46 @@ T = TypeVar("T")
 
 
 class ResponseSuccessSchema(BaseModel, Generic[T]):
-    success: Literal[True]
-    data: T
-    message: str | None
+    success: Annotated[Literal[True], Field("Always true for success response")]
+    data: Annotated[T, Field(description="Response data")]
+    message: Annotated[
+        str | None, Field(description="Optional, message to display to user")
+    ]
 
 
 class ResponseErrorSchema(BaseModel):
-    success: Literal[False]
-    error_code: str
-    message: str | None
+    success: Annotated[Literal[False], Field("Always false for error response")]
+    error_code: Annotated[
+        str, Field(description="Error code, give client more info about error")
+    ]
+    message: Annotated[
+        str | None, Field(description="Optional, message to display to user")
+    ]
+
+
+# For pagination
+class PaginationMeta(BaseModel):
+    """
+    Docs...
+    """
+
+    current_page: Annotated[int, Field(ge=0, description="Current page number")]
+    per_page: Annotated[int, Field(ge=0, description="Number of items per page")]
+    total_items: Annotated[int, Field(ge=0, description="Total number of items")]
+    total_pages: Annotated[int, Field(ge=0, description="Total number of pages")]
+    has_next: Annotated[bool, Field(description="Whether the next page is available")]
+    has_prev: Annotated[
+        bool, Field(description="Whether the previous page is available")
+    ]
+
+
+class ResponsePaginationSchema(ResponseSuccessSchema, Generic[T]):
+    """
+    Docs....
+    """
+
+    data: Sequence[T]
+    meta: PaginationMeta
 
 
 class APIResponse(JSONResponse):
@@ -42,7 +73,7 @@ class APIResponse(JSONResponse):
         """
         Copy from supper class __init__.
         Do not use this.
-        Use APIResponse.ok() or APIResponse.error() instead.
+        Use APIResponse.ok() or APIResponse.paginate() or APIResponse.error() instead.
         """
         super().__init__(content, status_code, headers, media_type, background)
 
@@ -58,6 +89,37 @@ class APIResponse(JSONResponse):
             "success": True,
             "data": jsonable_encoder(data),
             "message": message,
+        }
+        return APIResponse(content=body, status_code=status_code)
+
+    @staticmethod
+    def paginate(
+        current_page: int,
+        per_page: int,
+        total_items: int,
+        data: Sequence[Any] | None = None,
+        message: str | None = None,
+        status_code: int = 200,
+    ) -> "APIResponse":
+        """
+        Build JSON response for error response.
+        Body will be built as ResponsePaginationSchema.
+        """
+        total_pages = (total_items + per_page - 1) // per_page
+        if data is None:
+            data = []
+        body = {
+            "success": True,
+            "message": message,
+            "meta": {
+                "current_page": current_page,
+                "per_page": per_page,
+                "total_items": total_items,
+                "total_pages": total_pages,
+                "has_next": current_page < total_pages,
+                "has_prev": current_page > 1,
+            },
+            "data": jsonable_encoder(data),
         }
         return APIResponse(content=body, status_code=status_code)
 

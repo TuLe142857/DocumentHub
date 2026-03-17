@@ -1,6 +1,12 @@
-from fastapi import APIRouter, Form
+from fastapi import APIRouter, Form, Query
 
-from app.core import APIResponse, ResponseSuccessSchema, get_settings
+from app.core import (
+    APIResponse,
+    PaginationParamsDep,
+    ResponsePaginationSchema,
+    ResponseSuccessSchema,
+    get_settings,
+)
 from app.dependencies import DBSessionDep
 from app.schemas.category_schema import CategorySchema
 from app.schemas.document_schema import *
@@ -43,18 +49,29 @@ def get_categories(document_service: DocumentServiceDep, db_session: DBSessionDe
 
 @router.get(
     "",
-    response_model=ResponseSuccessSchema[list[DocumentSummaryResponse]],
+    response_model=ResponsePaginationSchema[DocumentSummaryResponse],
     summary="Get documents list of current user",
 )
 def get_document_list(
     access_token: AccessToken,
     document_service: DocumentServiceDep,
     auth_service: AuthServiceDep,
+    pagination: PaginationParamsDep,
 ):
     owner_id = auth_service.get_user_id(access_token)
-    doc_seq = document_service.get_document_by_owner_id(owner_id)
+
+    doc_seq, total_items = document_service.get_document_by_owner_id(
+        owner_id=owner_id, page=pagination.page, limit=pagination.limit
+    )
+
     response_data = [DocumentSummaryResponse.model_validate(_) for _ in doc_seq]
-    return APIResponse.ok(data=response_data)
+
+    return APIResponse.paginate(
+        data=response_data,
+        current_page=pagination.page,
+        per_page=pagination.limit,
+        total_items=total_items,
+    )
 
 
 @router.post("", response_model=ResponseSuccessSchema)

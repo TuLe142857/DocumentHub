@@ -36,13 +36,14 @@ class DocumentService:
         self.redis_client = redis_client
         self.s3_client = s3_client
 
-    def get_document_by_owner_id(self, owner_id: int) -> Sequence[Document]:
-        return (
-            self.db_session.execute(
-                select(Document).where(Document.owner_id == owner_id)
-            )
-            .scalars()
-            .all()
+    def get_document_by_owner_id(
+        self, owner_id: int, page: int, limit: int
+    ) -> tuple[Sequence[Document], int]:
+        skip = (page - 1) * limit
+        return self.crud_doc.get_multi(
+            Document.owner_id == owner_id,
+            skip=skip,
+            limit=limit,
         )
 
     def create_document(
