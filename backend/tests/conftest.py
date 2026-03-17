@@ -1,3 +1,5 @@
+import os
+
 from fastapi.testclient import TestClient
 import pytest
 from sqlalchemy import create_engine
@@ -7,10 +9,11 @@ from sqlalchemy.pool import StaticPool
 from app.dependencies import get_db_engine, get_db_session
 from app.main import celery_worker, create_app
 from app.models import *
-import os
+
 
 def setenv(k, v):
     os.environ[k] = v
+
 
 @pytest.fixture(scope="session", autouse=True)
 def setup():
@@ -33,6 +36,7 @@ def db_engine():
     ORMBase.metadata.create_all(engine)
     return engine
 
+
 @pytest.fixture(scope="session")
 def app(db_engine):
     celery_worker.conf.update(
@@ -43,6 +47,7 @@ def app(db_engine):
     app = create_app()
     app.dependency_overrides[get_db_engine] = lambda: db_engine
     return app
+
 
 @pytest.fixture
 def db_session(db_engine):
@@ -56,6 +61,7 @@ def db_session(db_engine):
     session.close()
     transaction.rollback()
     connection.close()
+
 
 @pytest.fixture
 def client(app, db_session):

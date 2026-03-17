@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, FastAPI
 
 from .auth_router import router as auth_router
 from .collection_router import router as collection_router
@@ -15,3 +15,7 @@ api_router.include_router(document_router)
 api_router.include_router(collection_router)
 api_router.include_router(recommendation_router)
 api_router.include_router(search_router)
+
+
+def register_api_router(app: FastAPI):
+    app.include_router(api_router)

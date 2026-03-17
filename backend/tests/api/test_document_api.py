@@ -1,8 +1,10 @@
 from tests.utils.api_assertions import assert_response_error, assert_response_ok
 from tests.utils.db_fixture import category, document, role_user, user
 
+
 def test_get_document_supported_type(client):
     assert_response_ok(client.get("/api/documents/supported_types"))
+
 
 def test_upload_document_api(client, user, category):
     # login
@@ -51,7 +53,6 @@ def test_get_document_detail(client, user, category, document):
 
     assert_response_ok(client.get(f"/api/documents/{document.id}"))
 
+
 def test_update_document_api(client, user, document):
     assert True
-
-

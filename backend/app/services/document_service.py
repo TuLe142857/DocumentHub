@@ -93,7 +93,6 @@ class DocumentService:
             },
         )
 
-
         self.db_session.commit()
 
         # finish create document & insert to database

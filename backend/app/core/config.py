@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: Literal["dev", "prod"] = "dev"
 
     SUPPORTED_FILE_TYPE: List[str] = [".doc", ".docx", ".ppt", ".pptx", ".pdf"]
+    MAX_FILE_SIZE: int = 5 * 1024 * 1024  # 5MB
 
     JWT_SECRET_KEY: SecretStr
     JWT_ALGORITHM: str = "HS256"

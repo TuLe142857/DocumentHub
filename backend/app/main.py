@@ -8,7 +8,8 @@ from app.core import (
 )
 from app.dependencies import get_db_engine, get_gotenberg, get_redis, get_s3
 from app.models import *
-from app.routes import api_router
+from app.routes import register_api_router
+from app.routes.middlewares import register_middleware
 
 from .worker import celery_worker
 
@@ -16,14 +17,6 @@ from .worker import celery_worker
 @asynccontextmanager
 async def custom_lifespan(app_instance: FastAPI):
     # startup...
-
-    # clear cache to reload setting from env
-    # this is for testing with custom config
-    get_settings.cache_clear()
-    get_db_engine.cache_clear()
-    get_redis.cache_clear()
-    get_s3.cache_clear()
-    get_gotenberg.cache_clear()
 
     ORMBase.metadata.create_all(get_db_engine())
     try:
@@ -38,11 +31,19 @@ async def custom_lifespan(app_instance: FastAPI):
 
 
 def create_app() -> FastAPI:
+    # clear cache to reload setting from env
+    # this is for testing with custom config
+    get_settings.cache_clear()
+    get_db_engine.cache_clear()
+    get_redis.cache_clear()
+    get_s3.cache_clear()
+    get_gotenberg.cache_clear()
+
     app_instance = FastAPI(lifespan=custom_lifespan)
 
     register_exception_handlers(app_instance)
-
-    app_instance.include_router(api_router)
+    register_api_router(app_instance)
+    register_middleware(app_instance)
 
     return app_instance
 

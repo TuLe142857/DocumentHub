@@ -3,7 +3,6 @@ import pytest
 from app.models import *
 
 
-
 @pytest.fixture
 def role_user(db_session):
     role = Role.get_or_create("USER", db_session)
