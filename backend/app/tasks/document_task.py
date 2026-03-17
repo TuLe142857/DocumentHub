@@ -1,4 +1,5 @@
 import io
+import logging
 
 from celery import shared_task
 from sqlalchemy import select
@@ -17,6 +18,7 @@ from app.dependencies import (
     get_s3,
 )
 from app.models import Document, DocumentStatus
+from app.utils.file_utils import count_pdf_pages, extract_pdf_thumbnail
 
 
 @shared_task
@@ -49,6 +51,8 @@ def generate_document_preview_task(document_id: int):
         document.status = DocumentStatus.PROCESSING
         session.commit()
 
+        # Convert file to PDF & upload to s3
+        logging.info("Convert file to PDF....")
         pdf_bytes = gotenberg_service.convert_from_url(
             s3_client.generate_presigned_url(
                 "get_object",
@@ -61,14 +65,26 @@ def generate_document_preview_task(document_id: int):
             )
         )
 
-        pdf_io = io.BytesIO(pdf_bytes)
+        total_pages = count_pdf_pages(pdf_bytes)
+        thumbnail_bytes = extract_pdf_thumbnail(pdf_bytes)
 
+        logging.info("Uploading PDF file to S3.....")
         s3_client.upload_fileobj(
-            pdf_io,
+            io.BytesIO(pdf_bytes),
             Bucket=settings.S3_DOCUMENTS_BUCKET,
             Key=document.file_preview_object_key,
             ExtraArgs={"ContentType": "application/pdf"},
         )
 
+        logging.info("Uploading PDF thumbnail file to S3.....")
+        s3_client.upload_fileobj(
+            io.BytesIO(thumbnail_bytes),
+            Bucket=settings.S3_DOCUMENTS_BUCKET,
+            Key=document.thumbnail_object_key,
+            ExtraArgs={"ContentType": "image/png"},
+        )
+
+        # Finish change document status
         document.status = DocumentStatus.READY
+        document.page_count = total_pages
         session.commit()

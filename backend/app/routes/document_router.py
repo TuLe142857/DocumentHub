@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Form
 
-from app.core import APIResponse, ResponseSuccessSchema
-from app.schemas.document_schema import *
+from app.core import APIResponse, ResponseSuccessSchema, get_settings
+from app.dependencies import DBSessionDep
 from app.schemas.category_schema import CategorySchema
+from app.schemas.document_schema import *
 from app.services.auth_service import AuthServiceDep
 from app.services.document_service import DocumentServiceDep
 from app.services.jwt_service import AccessToken, FreshAccessToken, OptionalAccessToken
-from app.dependencies import DBSessionDep
+
 router = APIRouter(prefix="/documents", tags=["Document"])
 
 
@@ -22,13 +23,23 @@ def get_supported_types():
     )
     return APIResponse.ok(data=res_data)
 
+
+@router.get("/max_size", response_model=ResponseSuccessSchema[int])
+def get_max_supported_document_size_bytes():
+    settings = get_settings()
+    return APIResponse.ok(data=settings.MAX_FILE_SIZE)
+
+
 @router.get("/categories", response_model=ResponseSuccessSchema[list[CategorySchema]])
 def get_categories(document_service: DocumentServiceDep, db_session: DBSessionDep):
     from sqlalchemy import select
+
     from app.models import Category
+
     categories = db_session.execute(select(Category)).scalars().all()
     res = [CategorySchema.model_validate(category) for category in categories]
     return APIResponse.ok(data=res)
+
 
 @router.get(
     "",

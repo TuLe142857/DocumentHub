@@ -1,11 +1,7 @@
 import hashlib
-import io
 from typing import BinaryIO
 
-from docx import Document
-import olefile
-from pptx import Presentation
-from pypdf import PdfReader
+import fitz
 
 
 def get_file_extension(filename: str) -> str:
@@ -31,25 +27,17 @@ def md5_checksum(file: BinaryIO) -> str:
     return md5.hexdigest()
 
 
-def get_page_count(binary_stream, extension):
-    extension = extension.lower().strip(".")
+def extract_pdf_thumbnail(pdf_bytes: bytes, *, img_format: str = "png") -> bytes:
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    page = doc.load_page(0)
+    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+    img_bytes = pix.tobytes(img_format)
+    doc.close()
+    return img_bytes
 
-    if extension == "pdf":
-        reader = PdfReader(binary_stream)
-        return len(reader.pages)
 
-    elif extension == "docx":
-        doc = Document(binary_stream)
-
-        return doc.core_properties.pages if doc.core_properties.pages else 0
-
-    elif extension == "pptx":
-        prs = Presentation(binary_stream)
-        return len(prs.slides)
-
-    elif extension in ["doc", "ppt"]:
-        ole = olefile.OleFileIO(binary_stream)
-        meta = ole.get_metadata()
-        return meta.num_pages if extension == "doc" else meta.slides
-
-    return 0
+def count_pdf_pages(pdf_bytes: bytes) -> int:
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    page_count = doc.page_count
+    doc.close()
+    return page_count

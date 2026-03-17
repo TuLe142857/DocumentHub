@@ -1,6 +1,7 @@
 from .file_utils import (
+    count_pdf_pages,
+    extract_pdf_thumbnail,
     get_file_extension,
-    get_page_count,
     md5_checksum,
     sha256_checksum,
 )

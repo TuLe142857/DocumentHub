@@ -1,5 +1,7 @@
-from pydantic import BaseModel, Field, ConfigDict
 from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, Field
+
 
 class CategorySchema(BaseModel):
     model_config = ConfigDict(extra="ignore", from_attributes=True)

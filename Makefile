@@ -14,7 +14,7 @@ endif
 
 DC_EXEC = $(DC) exec -it
 
-build: debug
+build:
 	$(DC) up -d --build
 	$(if $(filter dev, $(target)), $(DC_EXEC) -it backend uv sync --frozen, )
 test:
