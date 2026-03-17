@@ -215,7 +215,7 @@ class JWTPayloadProvider:
             if self.optional:
                 return None
             else:
-                raise AppException(ErrorCode.UNAUTHORIZED, "Require JWT Refresh Cookie")
+                raise AppException(ErrorCode.UNAUTHORIZED, "Require JWT Cookie")
 
         payload = jwt_service.validate_token(token)
 
