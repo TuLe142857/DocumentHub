@@ -5,8 +5,7 @@ from sqlalchemy.orm import selectinload
 from app.core import APIResponse, ErrorCode, ResponseErrorSchema, ResponseSuccessSchema
 from app.dependencies import DBSessionDep
 from app.models import User
-from app.schemas.request.auth_request import *
-from app.schemas.response.auth_response import *
+from app.schemas.auth_schema import *
 from app.services.auth_service import AuthServiceDep
 from app.services.jwt_service import AccessToken, JWTPayload, RefreshToken
 

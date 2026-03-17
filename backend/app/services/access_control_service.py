@@ -4,6 +4,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode
+from app.crud.collection import CRUDCollection, CRUDCollectionDep
 from app.crud.document import CRUDDocument, CRUDDocumentDep
 from app.crud.user import CRUDUser, CRUDUserDep
 from app.dependencies import DBSessionDep
@@ -12,10 +13,15 @@ from app.models import *
 
 class AccessControlService:
     def __init__(
-        self, crud_doc: CRUDDocument, crud_user: CRUDUser, db_session: Session
+        self,
+        crud_doc: CRUDDocument,
+        crud_user: CRUDUser,
+        crud_collection: CRUDCollection,
+        db_session: Session,
     ):
         self.crud_doc = crud_doc
         self.crud_user = crud_user
+        self.crud_collection = crud_collection
         self.db_session = db_session
 
     def can_view_document(self, user_id: int, document_id: int) -> AppException | None:
@@ -116,11 +122,49 @@ class AccessControlService:
         """
         pass
 
+    def can_view_collection(
+        self, user_id: int, collection: int | Collection
+    ) -> AppException | None:
+        if isinstance(collection, int):
+            collection = self.crud_collection.get(
+                collection, on_not_found=AppException(ErrorCode.RESOURCE_NOT_FOUND)
+            )
+        if collection.owner_id != user_id:
+            return AppException(ErrorCode.FORBIDDEN)
+        return None
+
+    def can_update_collection(
+        self, user_id: int, collection: int | Collection
+    ) -> AppException | None:
+        if isinstance(collection, int):
+            collection = self.crud_collection.get(
+                collection, on_not_found=AppException(ErrorCode.RESOURCE_NOT_FOUND)
+            )
+
+        if collection.owner_id != user_id:
+            return AppException(ErrorCode.FORBIDDEN)
+        return None
+
+    def can_delete_collection(
+        self, user_id: int, collection: int | Collection
+    ) -> AppException | None:
+        if isinstance(collection, int):
+            collection = self.crud_collection.get(
+                collection, on_not_found=AppException(ErrorCode.RESOURCE_NOT_FOUND)
+            )
+
+        if collection.owner_id != user_id:
+            return AppException(ErrorCode.FORBIDDEN)
+        return None
+
 
 def get_access_control_service(
-    crud_doc: CRUDDocumentDep, crud_user: CRUDUserDep, db_session: DBSessionDep
+    crud_doc: CRUDDocumentDep,
+    crud_user: CRUDUserDep,
+    crud_collection: CRUDCollectionDep,
+    db_session: DBSessionDep,
 ):
-    return AccessControlService(crud_doc, crud_user, db_session)
+    return AccessControlService(crud_doc, crud_user, crud_collection, db_session)
 
 
 AccessControlServiceDep = Annotated[

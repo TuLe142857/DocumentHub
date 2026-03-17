@@ -33,8 +33,29 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             self.db_session.refresh(db_obj)
         return db_obj
 
-    def get(self, ident: Any) -> ModelType | None:
-        return self.db_session.get(self.model, ident)
+    def get(
+        self, ident: Any, *, on_not_found: Exception | None = None
+    ) -> ModelType | None:
+        """Retrieve a single record by its primary key.
+
+        Args:
+            ident: The primary key or composite key of the record.
+            on_not_found: Optional exception to raise if the record is not found.
+
+        Returns:
+            The retrieved model instance, or None if not found and no exception is provided.
+
+        Raises:
+            Exception: The specified `on_not_found` exception if the record is missing.
+        """
+        db_obj = self.db_session.get(self.model, ident)
+        if (
+            (db_obj is None)
+            and (on_not_found is not None)
+            and (isinstance(on_not_found, Exception))
+        ):
+            raise on_not_found
+        return db_obj
 
     def list(self, *, skip: int = 0, limit: int = 100):
         return self.db_session.execute(
