@@ -70,7 +70,7 @@ class AccessControlService:
         if document.owner_id == user_id:
             return None
 
-        return self.can_delete_document(document)
+        return self.can_view_by_non_owner(document)
 
     def can_update_document(
         self, user_id: int, doc: int | Document

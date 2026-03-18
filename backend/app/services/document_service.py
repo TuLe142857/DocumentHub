@@ -160,9 +160,20 @@ class DocumentService:
         err = self.access_control.can_view_document(user_id, document_id)
         if err:
             raise err
-        return self.db_session.execute(
+
+
+        doc: Document =  self.db_session.execute(
             select(Document).where(Document.id == document_id)
         ).scalar_one_or_none()
+
+
+        # increase view
+        redis_view_key = f"view:doc:{document_id}:user:{user_id}"
+        if self.redis_client.set(redis_view_key, "1", ex=3600, nx=True):
+            doc.view_count += 1
+            self.db_session.flush()
+
+        return doc
 
     def update_document(
         self, user_id: int, document_id: int, update_data: dict[str, Any]
