@@ -6,7 +6,7 @@ from .document_router import router as document_router
 from .health_check_router import router as health_check_router
 from .recommendation_router import router as recommendation_router
 from .search_router import router as search_router
-from .user_profile_router import router as user_profile_router
+from .user_router import router as user_profile_router
 
 api_router = APIRouter(prefix="/api")
 

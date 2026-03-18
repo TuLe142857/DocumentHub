@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+from botocore.exceptions import ClientError
 from fastapi import FastAPI
 
 from app.core import (
@@ -14,16 +15,22 @@ from app.routes.middlewares import register_middleware
 from .worker import celery_worker
 
 
+def create_s3_bucket(bucket_name: str):
+    try:
+        get_s3().create_bucket(Bucket=bucket_name)
+    except ClientError:
+        pass
+
+
 @asynccontextmanager
 async def custom_lifespan(app_instance: FastAPI):
     # startup...
 
     ORMBase.metadata.create_all(get_db_engine())
-    try:
-        get_s3().create_bucket(Bucket=get_settings().S3_DOCUMENTS_BUCKET)
-    except Exception:
-        # Bucket already exits
-        pass
+
+    settings = get_settings()
+    create_s3_bucket(settings.S3_DOCUMENTS_BUCKET)
+    create_s3_bucket(settings.S3_IMAGES_BUCKET)
 
     yield
 

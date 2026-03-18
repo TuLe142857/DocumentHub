@@ -4,12 +4,13 @@ import uuid
 from fastapi import Depends
 from mypy_boto3_s3 import S3Client
 from redis import Redis
-from sqlalchemy import Select, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode, get_settings
 from app.crud.document import CRUDDocument, CRUDDocumentDep
+from app.crud.user import CRUDUser, CRUDUserDep
 from app.dependencies import DBSessionDep, RedisDep, S3Dep
 from app.models import *
 from app.services.access_control_service import (
@@ -24,6 +25,7 @@ class DocumentService:
     def __init__(
         self,
         crud_doc: CRUDDocument,
+        crud_user: CRUDUser,
         access_control: AccessControlService,
         db_session: Session,
         redis_client: Redis,
@@ -31,6 +33,7 @@ class DocumentService:
     ):
 
         self.crud_doc = crud_doc
+        self.crud_user = crud_user
         self.access_control = access_control
         self.db_session = db_session
         self.redis_client = redis_client
@@ -43,6 +46,59 @@ class DocumentService:
         return self.crud_doc.get_multi(
             Document.owner_id == owner_id,
             skip=skip,
+            limit=limit,
+        )
+
+    def get_public_document_list(
+        self, owner: int | str | User, page: int, limit: int
+    ) -> tuple[Sequence[Document], int]:
+        if isinstance(owner, User):
+            owner_id = owner.id
+        elif isinstance(owner, str):
+            owner_id = self.crud_user.get_by_identity(owner).id
+        else:
+            owner_id = owner
+
+        return self.crud_doc.get_multi(
+            Document.owner_id == owner_id,
+            Document.status == DocumentStatus.READY,
+            Document.visibility == DocumentVisibility.PUBLIC,
+            skip=(page - 1) * limit,
+            limit=limit,
+        )
+
+    def get_document_list(
+        self, owner: int | str | User, viewer: int | User, page: int, limit: int
+    ) -> tuple[Sequence[Document], int]:
+        """
+        Select documents that belong to a specific owner.
+        If viewer
+        Args:
+            owner: owner of the documents. This can be instance User or user_id(int) or username/email(str)
+            viewer: the user that query this list. This can be instance User or user_id(int) or username/email(str)
+            page:
+            limit:
+
+        Returns:
+        """
+        if isinstance(owner, User):
+            owner_id = owner.id
+        elif isinstance(owner, str):
+            owner_id = self.crud_user.get_by_identity(owner).id
+        else:
+            owner_id = owner
+
+        if isinstance(viewer, User):
+            viewer_id = viewer.id
+        else:
+            viewer_id = viewer
+
+        if viewer_id != owner_id:
+            return self.get_public_document_list(owner_id, page, limit)
+        return self.crud_doc.get_multi(
+            Document.owner_id == owner_id,
+            Document.status == DocumentStatus.READY,
+            skip=(page - 1) * limit,
             limit=limit,
         )
 
@@ -159,13 +215,16 @@ class DocumentService:
 
 
 def get_document_service(
-    crud: CRUDDocumentDep,
+    crud_doc: CRUDDocumentDep,
+    crud_user: CRUDUserDep,
     access_control: AccessControlServiceDep,
     db_session: DBSessionDep,
     redis_client: RedisDep,
     s3_client: S3Dep,
 ) -> DocumentService:
-    return DocumentService(crud, access_control, db_session, redis_client, s3_client)
+    return DocumentService(
+        crud_doc, crud_user, access_control, db_session, redis_client, s3_client
+    )
 
 
 DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]

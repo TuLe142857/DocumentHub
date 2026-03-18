@@ -24,15 +24,13 @@ class AccessControlService:
         self.crud_collection = crud_collection
         self.db_session = db_session
 
-    def can_view_document(self, user_id: int, document_id: int) -> AppException | None:
-        document = self.crud_doc.get(document_id)
-        if document is None:
-            return AppException(ErrorCode.RESOURCE_NOT_FOUND, "Document not found")
-        # owner
-        if document.owner_id == user_id:
-            return None
-
-        # other
+    def can_view_by_non_owner(self, doc: int | Document) -> AppException | None:
+        if isinstance(doc, int):
+            document = self.crud_doc.get(doc)
+            if document is None:
+                return AppException(ErrorCode.RESOURCE_NOT_FOUND, "Document not found")
+        else:
+            document = doc
 
         if document.status == DocumentStatus.BANNED:
             return AppException(ErrorCode.RESOURCE_NOT_AVAILABLE, "Document is banned")
@@ -50,50 +48,77 @@ class AccessControlService:
         else:
             return AppException(ErrorCode.FORBIDDEN, "Document is not public")
 
-    def can_update_document(
-        self, user_id: int, document_id: int
+    def can_view_document(
+        self, user_id: int, doc: int | Document
     ) -> AppException | None:
-        document = self.crud_doc.get(document_id)
-        if document is None:
-            return AppException(ErrorCode.RESOURCE_NOT_FOUND, "Document not found")
+        """
+
+        Args:
+            user_id: user id
+            doc: document id or Document instance
+
+        Returns:
+
+        """
+        if isinstance(doc, int):
+            document = self.crud_doc.get(doc)
+            if document is None:
+                return AppException(ErrorCode.RESOURCE_NOT_FOUND, "Document not found")
+        else:
+            document = doc
+        # owner
         if document.owner_id == user_id:
             return None
-        return AppException(ErrorCode.FORBIDDEN)
+
+        return self.can_delete_document(document)
+
+    def can_update_document(
+        self, user_id: int, doc: int | Document
+    ) -> AppException | None:
+        if isinstance(doc, int):
+            document = self.crud_doc.get(doc)
+            if document is None:
+                return AppException(ErrorCode.RESOURCE_NOT_FOUND, "Document not found")
+        else:
+            document = doc
+
+        if document.owner_id == user_id:
+            return None
+        else:
+            return AppException(ErrorCode.FORBIDDEN)
 
     def can_delete_document(
-        self, user_id: int, document_id: int
+        self, user_id: int, doc: int | Document
     ) -> AppException | None:
         """
         Soft deletes document(move to trash)
         Args:
             user_id:
-            document_id:
+            doc:
 
         Returns:
 
         """
-        document = self.crud_doc.get(document_id)
-        if document is None:
-            return AppException(ErrorCode.RESOURCE_NOT_FOUND, "Document not found")
+        if isinstance(doc, int):
+            document = self.crud_doc.get(doc)
+            if document is None:
+                return AppException(ErrorCode.RESOURCE_NOT_FOUND, "Document not found")
+        else:
+            document = doc
+
         if document.owner_id == user_id:
             return None
         return AppException(ErrorCode.FORBIDDEN)
 
     def can_restore_document(
-        self, user_id: int, document_id: int
+        self, user_id: int, doc: int | Document
     ) -> AppException | None:
-        """
-        Restores document(restore from trash)
-        Args:
-            user_id:
-            document_id:
-
-        Returns:
-
-        """
-        document = self.crud_doc.get(document_id)
-        if document is None:
-            return AppException(ErrorCode.RESOURCE_NOT_FOUND, "Document not found")
+        if isinstance(doc, int):
+            document = self.crud_doc.get(doc)
+            if document is None:
+                return AppException(ErrorCode.RESOURCE_NOT_FOUND, "Document not found")
+        else:
+            document = doc
         if document.owner_id == user_id:
             return None
         return AppException(ErrorCode.FORBIDDEN)
