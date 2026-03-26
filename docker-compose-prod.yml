@@ -7,6 +7,13 @@ services:
         UID: ${UID-1000}
         GID: ${GID-1000}
 
+  cloudflare:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Variable is not set or empty}
+
   celery_worker:
     build:
       context: ./backend
