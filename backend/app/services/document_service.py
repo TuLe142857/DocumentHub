@@ -161,11 +161,9 @@ class DocumentService:
         if err:
             raise err
 
-
-        doc: Document =  self.db_session.execute(
+        doc: Document = self.db_session.execute(
             select(Document).where(Document.id == document_id)
         ).scalar_one_or_none()
-
 
         # increase view
         redis_view_key = f"view:doc:{document_id}:user:{user_id}"

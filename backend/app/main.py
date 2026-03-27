@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from botocore.exceptions import ClientError
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.core import (
     get_settings,
@@ -47,6 +48,14 @@ def create_app() -> FastAPI:
     get_gotenberg.cache_clear()
 
     app_instance = FastAPI(lifespan=custom_lifespan)
+
+    app_instance.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     register_exception_handlers(app_instance)
     register_api_router(app_instance)
