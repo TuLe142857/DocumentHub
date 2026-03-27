@@ -1,8 +1,15 @@
 server {
     listen 80;
     client_max_body_size 20M;
+
+    location /{
+        proxy_pass ${FRONTEND_ENDPOINT};
+        proxy_set_header Host $host;
+    }
+
     location /api/ {
         proxy_pass ${BACKEND_ENDPOINT};
+        proxy_set_header Host $host;
     }
 
     location /minio/ {

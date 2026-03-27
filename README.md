@@ -99,13 +99,10 @@ cp .env.example .env
 > - Thay thế các giá trị `changethis`
 > - Nhập các giá trị liên quan SMTP phù hợp
 
-## Build 
+## Build
+SSH to server and run:
 ```shell
-make build target=dev
-```
-Web: http://localhost:80
-
-## Stop
-``` shell
-make down target=prod
+export ENVIRONMENT=prod
+export target=prod
+make build
 ```

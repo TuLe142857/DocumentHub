@@ -1,0 +1,24 @@
+server {
+    listen 80;
+    server_name ${BACKEND_DOMAIN};
+    client_max_body_size 20M;
+
+    location /api/ {
+        proxy_pass http://backend:8000;
+    }
+
+    location /minio/ {
+        proxy_pass http://minio:9000/;
+    }
+}
+
+server {
+    listen 80;
+    server_name ${FRONTEND_DOMAIN};
+    client_max_body_size 20M;
+
+    location /{
+        proxy_pass http://frontend:80;
+        proxy_set_header Host $host;
+    }
+}

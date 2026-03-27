@@ -1,7 +1,14 @@
 services:
   proxy:
+    volumes:
+      - ./docker/nginx/templates/dev.conf.template:/etc/nginx/templates/default.conf.template
+    environment:
+      FRONTEND_ENDPOINT: http://frontend:5173
+      BACKEND_ENDPOINT: http://backend:8000
+      MINIO_ENDPOINT: http://minio:9000/
     ports:
       - "${NGINX_PORT_EXTERNAL:-80}:80"
+
   backend:
     build:
       context: ./backend
@@ -20,6 +27,17 @@ services:
     ports:
       - "${BACKEND_PORT_EXTERNAL:-8000}:8000"
 
+  frontend:
+#    profiles: [frontend]
+    build:
+      context: ./frontend
+      target: dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "${FRONTEND_PORT_EXTERNAL:-5173}:5173"
+
   celery_worker:
     build:
       context: ./backend
@@ -32,7 +50,7 @@ services:
       - ./backend/app:/app/app
       - ./backend/pyproject.toml:/app/pyproject.toml
       - ./backend/uv.lock:/app/uv.lock
-    command: watchfiles "celery worker --loglevel=DEBUG" app
+    command: watchfiles "celery worker --loglevel=DEBUG --concurrency=4" app
 
   db:
     volumes:
@@ -58,11 +76,11 @@ services:
     image: redis/redisinsight:latest
     restart: unless-stopped
     environment:
-      - RI_REDIS_HOST=redis
-      - RI_REDIS_PORT=6379
-      - RI_REDIS_USERNAME=${REDIS_USER:?Variable is not set or empty}
-      - RI_REDIS_PASSWORD=${REDIS_PASSWORD:?Variable is not set or empty}
-      - RI_REDIS_DB=0
+      RI_REDIS_HOST: redis
+      RI_REDIS_PORT: 6379
+      RI_REDIS_USERNAME: ${REDIS_USER:?Variable is not set or empty}
+      RI_REDIS_PASSWORD: ${REDIS_PASSWORD:?Variable is not set or empty}
+      RI_REDIS_DB: 0
     volumes:
       - redis_insight_data_dev:/data
     ports:
