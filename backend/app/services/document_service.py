@@ -1,3 +1,4 @@
+import datetime
 from typing import Annotated, Any, BinaryIO, Sequence
 import uuid
 
@@ -213,14 +214,136 @@ class DocumentService:
             raise err
         self.crud_doc.soft_delete(self.crud_doc.get(document_id))
 
-    def get_trash_list(self, user_id: int) -> list[Document]:
-        return self.crud_doc.get_trash_list(user_id)
+    def get_trash_list(self, user_id: int) -> Sequence[Document]:
+        return (
+            self.db_session.execute(
+                select(Document).where(
+                    Document.owner_id == user_id, Document.deleted_at != None
+                )
+            )
+            .scalars()
+            .all()
+        )
 
     def restore_document(self, document_id: int, user_id: int):
-        err = self.access_control.can_view_document(user_id, document_id)
+        err = self.access_control.can_restore_document(user_id, document_id)
         if err:
             raise err
-        self.crud_doc.restore_document_from_trash(self.crud_doc.get(document_id))
+        document = self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
+        if document.deleted_at is None:
+            raise AppException(ErrorCode.RESOURCE_CONFLICT, "Document is not deleted")
+        document.deleted_at = None
+        if document.banned_at is not None:
+            document.status = DocumentStatus.BANNED
+        else:
+            document.status = DocumentStatus.READY
+        self.db_session.add(document)
+
+    def ban_document(self, document_id: int, admin_id: int, note: str | None = None):
+        err = self.access_control.can_ban_document(admin_id, document_id)
+        if err:
+            raise err
+        document = self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
+        if document.status == DocumentStatus.BANNED:
+            raise AppException(
+                ErrorCode.RESOURCE_CONFLICT, "Document is already banned"
+            )
+
+        document.status = DocumentStatus.BANNED
+        document.banned_at = datetime.datetime.now(datetime.timezone.utc)
+        moderation_log = ModerationLog(
+            document_id=document_id,
+            admin_id=admin_id,
+            action=ModerationAction.BAN_DOCUMENT,
+            note=note,
+        )
+
+        self.db_session.add(document)
+        self.db_session.add(moderation_log)
+
+    def unban_document(self, document_id: int, admin_id: int, note: str | None = None):
+        err = self.access_control.can_unban_document(admin_id, document_id)
+        if err:
+            raise err
+        document = self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
+        if document.status != DocumentStatus.BANNED:
+            raise AppException(ErrorCode.RESOURCE_CONFLICT, "Document not banned")
+
+        if document.deleted_at is None:
+            document.status = DocumentStatus.READY
+        else:
+            document.status = DocumentStatus.DELETED
+
+        document.banned_at = None
+        moderation_log = ModerationLog(
+            document_id=document_id,
+            admin_id=admin_id,
+            action=ModerationAction.UNBAN_DOCUMENT,
+            note=note,
+        )
+
+        self.db_session.add(document)
+        self.db_session.add(moderation_log)
+
+    def create_category(self, name: str):
+        if (
+            self.db_session.execute(
+                select(Category).where(Category.name == name)
+            ).scalar_one_or_none()
+            is not None
+        ):
+            raise AppException(
+                ErrorCode.RESOURCE_ALREADY_EXISTS, "Category already exists"
+            )
+        category = Category(name=name)
+        self.db_session.add(category)
+
+    def rename_category(self, category_id: int, new_name: str):
+        category = self.db_session.execute(
+            select(Category).where(Category.id == category_id)
+        ).scalar_one_or_none()
+        if category is None:
+            raise AppException(ErrorCode.RESOURCE_NOT_FOUND, "Category does not exist")
+        if (
+            self.db_session.execute(
+                select(Category).where(Category.name == new_name)
+            ).scalar_one_or_none()
+            is not None
+        ):
+            raise AppException(
+                ErrorCode.RESOURCE_ALREADY_EXISTS, "Category already exists"
+            )
+        category.name = new_name
+        self.db_session.add(category)
+
+    def delete_category(self, category_id: int):
+        is_used = self.db_session.execute(
+            select(Document).where(Document.category_id == category_id)
+        ).scalar_one_or_none()
+
+        if is_used:
+            raise AppException(ErrorCode.RESOURCE_IN_USE, "Category is in use")
+        category = self.db_session.execute(
+            select(Category).where(Category.id == category_id)
+        ).scalar_one_or_none()
+        if category is None:
+            raise AppException(ErrorCode.RESOURCE_NOT_FOUND, "Category does not exist")
+        self.db_session.delete()
 
 
 def get_document_service(

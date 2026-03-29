@@ -129,11 +129,16 @@ class AccessControlService:
         Args:
             user_id:
             document_id:
-
         Returns:
 
         """
-        pass
+        user: User = self.crud_user.get(
+            user_id,
+            on_not_found=AppException(ErrorCode.INVALID_CREDENTIALS, "User not found"),
+        )
+        if user.role.name == "ADMIN":
+            return None
+        return AppException(ErrorCode.FORBIDDEN)
 
     def can_unban_document(self, user_id: int, document_id: int) -> AppException | None:
         """
@@ -145,7 +150,13 @@ class AccessControlService:
         Returns:
 
         """
-        pass
+        user: User = self.crud_user.get(
+            user_id,
+            on_not_found=AppException(ErrorCode.INVALID_CREDENTIALS, "User not found"),
+        )
+        if user.role.name == "ADMIN":
+            return None
+        return AppException(ErrorCode.FORBIDDEN)
 
     def can_view_collection(
         self, user_id: int, collection: int | Collection

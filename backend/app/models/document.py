@@ -27,7 +27,7 @@ class DocumentVisibility(enum.Enum):
 
 
 class DocumentStatus(enum.Enum):
-    # document is uploading, calc checksum, conver pdf for preview
+    # document is uploading, calc checksum, conver PDF for preview
     PROCESSING = "PROCESSING"
 
     # document ready for select
@@ -138,7 +138,7 @@ class Tag(ORMBase):
                 ).scalar_one_or_none()
 
 
-__document_tags_table__ = Table(
+document_tags_table = Table(
     "document_tags",
     ORMBase.metadata,
     Column("document_id", Integer, ForeignKey("documents.id"), primary_key=True),

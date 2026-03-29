@@ -8,6 +8,13 @@ from .document import (
     DocumentVisibility,
     Tag,
 )
+from .report import (
+    DocumentReport,
+    ModerationAction,
+    ModerationLog,
+    ReportReason,
+    ReportStatus,
+)
 from .user import Gender, Role, User, UserProfile
 
 try:
@@ -31,4 +38,9 @@ __all__ = [
     "UserProfile",
     "Gender",
     "Role",
+    "DocumentReport",
+    "ModerationAction",
+    "ModerationLog",
+    "ReportReason",
+    "ReportStatus",
 ]

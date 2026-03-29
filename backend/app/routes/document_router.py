@@ -1,18 +1,17 @@
-from fastapi import APIRouter, Form, Query
+from fastapi import APIRouter, Form
 
 from app.core import (
     APIResponse,
     PaginationQueryDep,
     ResponsePaginationSchema,
     ResponseSuccessSchema,
-    get_settings,
 )
+from app.core.sercurity import AccessToken, FreshAccessToken, OptionalAccessToken
 from app.dependencies import DBSessionDep
 from app.schemas.category_schema import CategorySchema
 from app.schemas.document_schema import *
 from app.services.auth_service import AuthServiceDep
 from app.services.document_service import DocumentServiceDep
-from app.services.jwt_service import AccessToken, FreshAccessToken, OptionalAccessToken
 
 router = APIRouter(prefix="/documents", tags=["Document"])
 

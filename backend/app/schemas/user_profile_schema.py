@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import UploadFile
 from pydantic import AfterValidator, AliasPath, BaseModel, ConfigDict, Field
 
-from app.core import AppException, ErrorCode, get_settings
+from app.core import AppException, ErrorCode, PaginationQuery, get_settings
 from app.models import Gender
 from app.schemas.validate import validate_s3_url
 from app.utils import get_file_extension

@@ -14,7 +14,7 @@ class TrendingQuery(BaseModel):
         ),
     ]
     timeframe: Annotated[
-        Literal["daily", "weekly", "monthly", "all_time"], Field(default="daily")
+        Literal["daily", "weekly", "monthly", "all_time"], Field(default="monthly")
     ]
     limit: Annotated[int, Field(ge=0, default=10)]
 

@@ -8,6 +8,7 @@ from app.core import (
     ResponsePaginationSchema,
     ResponseSuccessSchema,
 )
+from app.core.sercurity.jwt import AccessToken, OptionalAccessToken
 from app.schemas.document_schema import DocumentSummaryResponse
 from app.schemas.user_profile_schema import (
     AvatarUpdateRequest,
@@ -15,7 +16,6 @@ from app.schemas.user_profile_schema import (
     UserProfileUpdateRequest,
 )
 from app.services.document_service import DocumentServiceDep
-from app.services.jwt_service import AccessToken, OptionalAccessToken
 from app.services.user_service import UserServiceDep
 
 router = APIRouter(prefix="/users", tags=["UserProfile"])

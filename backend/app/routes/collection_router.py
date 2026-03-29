@@ -1,10 +1,10 @@
 from fastapi import APIRouter
 
 from app.core import APIResponse, ResponseSuccessSchema
+from app.core.sercurity import AccessToken
 from app.schemas.collection_schema import *
 from app.schemas.document_schema import DocumentSummaryResponse
 from app.services.collection_service import CollectionServiceDep
-from app.services.jwt_service import AccessToken
 
 router = APIRouter(prefix="/collections", tags=["Collection"])
 

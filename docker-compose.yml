@@ -46,6 +46,9 @@ services:
     image: nginx:latest
     restart: unless-stopped
 
+  frontend:
+    build: ./frontend
+
   backend:
     build: ./backend
     restart: unless-stopped
@@ -84,6 +87,16 @@ services:
     healthcheck:
       test: [ "CMD", "celery", "inspect", "ping" ]
       <<: *default-health-check
+
+  celery_beat:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      <<: [*backend-environment, *celery-environment]
+    command: celery beat --loglevel=INFO
+    depends_on:
+      db:
+        condition: service_healthy
 
   db:
     image: mysql:8.0.45

@@ -56,7 +56,7 @@ def seed_database(
     from sqlalchemy.exc import IntegrityError
 
     from app.dependencies import get_db_engine
-    from app.models import Category, ORMBase, Role, User, UserProfile
+    from app.models import Category, ORMBase, ReportReason, Role, User, UserProfile
 
     engine = get_db_engine()
 
@@ -104,6 +104,19 @@ def seed_database(
             categories = ["Science", "Computer", "Programming"]
             for category_name in categories:
                 session.add(Category(name=category_name))
+
+            """
+                GENERATE REPORT REASON
+            """
+            typer.echo("Create report reason")
+            report_reason = [
+                "SPAM",
+                "SCAM",
+                "COPYRIGHT_VIOLATION",
+                "FAKE_CONTENT",
+            ]
+            for r in report_reason:
+                session.add(ReportReason(code=r))
 
             typer.secho("Commit", fg=typer.colors.BLUE)
             session.commit()

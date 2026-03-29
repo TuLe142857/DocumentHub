@@ -1,15 +1,15 @@
-from typing import Annotated, BinaryIO
+from typing import Annotated, BinaryIO, Sequence
 
 from fastapi import Depends
 from mypy_boto3_s3 import S3Client
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode, get_settings
 from app.crud.user import CRUDUser, CRUDUserDep
 from app.crud.user_profile import CRUDUserProfile, CRUDUserProfileDep
 from app.dependencies import DBSessionDep, S3Dep
-from app.models import User, UserProfile
+from app.models import *
 
 
 class UserService:
@@ -24,6 +24,44 @@ class UserService:
         self.crud_profile = crud_profile
         self.db_session = db_session
         self.s3_client = s3_client
+
+    def list_user(
+        self,
+        filter_email: str|None=None,
+        filter_name: str | None = None,
+        filter_is_active: bool | None = None,
+        page: int = 1,
+        limit: int = 10,
+    ) -> tuple[Sequence[User], int]:
+
+        role_id_user = Role.get_or_create("USER", self.db_session).id
+        stmt = select(User).where(User.role_id == role_id_user)
+
+        if filter_email is not None:
+            stmt = stmt.where(User.email.like(f"%{filter_email}%"))
+        if filter_name is not None:
+            stmt = stmt.where(User.username.like(f"%{filter_name}%"))
+        if filter_is_active is not None:
+            stmt = stmt.where(User.is_active == filter_is_active)
+
+        # count
+        total_count = (
+            self.db_session.execute(
+                select(func.count()).select_from(stmt.subquery())
+            ).scalar()
+            or None
+        )
+
+        if total_count == 0:
+            return [], 0
+
+        # query
+        res = (
+            self.db_session.execute(stmt.offset((page - 1) * limit).limit(limit))
+            .scalars()
+            .all()
+        )
+        return res, total_count
 
     def get_by_id(self, user_id: int) -> User:
         return self.crud_user.get(

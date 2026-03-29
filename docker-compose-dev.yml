@@ -52,6 +52,8 @@ services:
       - ./backend/uv.lock:/app/uv.lock
     command: watchfiles "celery worker --loglevel=DEBUG --concurrency=4" app
 
+  celery_beat:
+    command: watchfiles "celery beat --loglevel=DEBUG"
   db:
     volumes:
       - ./docker/mysql/init/:/docker-entrypoint-initdb.d/

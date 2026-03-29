@@ -8,3 +8,11 @@ class CategorySchema(BaseModel):
 
     id: Annotated[int, Field()]
     name: Annotated[str, Field()]
+
+
+class CategoryCreateSchema(BaseModel):
+    name: Annotated[str, Field()]
+
+
+class CategoryUpdateSchema(BaseModel):
+    new_name: Annotated[str, Field()]

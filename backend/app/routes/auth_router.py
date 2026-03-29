@@ -2,12 +2,12 @@ from fastapi import APIRouter
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.core import APIResponse, ErrorCode, ResponseErrorSchema, ResponseSuccessSchema
+from app.core import APIResponse, ErrorCode, ResponseSuccessSchema
+from app.core.sercurity import AccessToken, RefreshToken
 from app.dependencies import DBSessionDep
 from app.models import User
 from app.schemas.auth_schema import *
 from app.services.auth_service import AuthServiceDep
-from app.services.jwt_service import AccessToken, JWTPayload, RefreshToken
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -25,7 +25,7 @@ def whoami(access_token: AccessToken, db_session: DBSessionDep):
     if user:
         res = SelfInfoResponse.model_validate(user)
 
-        return APIResponse.ok(data=access_token.__dict__())
+        return APIResponse.ok(data=res)
     else:
         return APIResponse.error(
             ErrorCode.INVALID_CREDENTIALS,

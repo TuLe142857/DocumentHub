@@ -2,17 +2,16 @@ from typing import Annotated, Literal
 
 from fastapi import Depends
 from redis import Redis
-from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode
+from app.core.sercurity import JWTPayload, JWTService, JWTServiceDep
 from app.crud.user import CRUDUser, CRUDUserDep
 from app.dependencies import DBSessionDep, RedisDep
 from app.models import *
 from app.utils import generate_otp
 
-from .jwt_service import JWTPayload, JWTService, JWTServiceDep
 from .mail_service import MailService, MailServiceDep
 
 
@@ -42,6 +41,19 @@ class AuthService:
         return self.jwt_service.generate_refresh_token(
             sub=str(user.id), claim=additional_claim
         )
+
+    def get_user(self, user_id: int) -> User:
+        return self.crud_user.get(
+            user_id,
+            on_not_found=AppException(ErrorCode.INVALID_CREDENTIALS, "User not found"),
+        )
+
+    def is_admin(self, user_id: int) -> bool:
+        try:
+            user = self.get_user(user_id)
+            return user.role.name == "ADMIN"
+        except AppException:
+            return False
 
     def get_user_id(
         self,
