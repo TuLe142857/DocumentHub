@@ -3,6 +3,7 @@ import datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import Depends, Request
+from fastapi.params import Cookie
 import jwt
 
 from app.core import AppException, ErrorCode, get_settings
@@ -50,6 +51,10 @@ class JWTService:
         }
         if claim:
             for key, value in claim.items():
+                if key in ["sub", "type", "fresh", "exp"]:
+                    raise RuntimeError(
+                        f"Claim key '{key}' is reserved and cannot be overridden."
+                    )
                 payload[key] = value
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
 
@@ -63,6 +68,10 @@ class JWTService:
         }
         if claim:
             for key, value in claim.items():
+                if key in ["sub", "type", "fresh", "exp"]:
+                    raise RuntimeError(
+                        f"Claim key '{key}' is reserved and cannot be overridden."
+                    )
                 payload[key] = value
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
 
@@ -93,56 +102,29 @@ class JWTService:
         except jwt.InvalidTokenError:
             raise AppException(ErrorCode.INVALID_JWT_TOKEN, "Invalid JWT token")
 
-    def validate_refresh_token(self, refresh_token: str) -> dict[str, Any]:
-        """
-        Raises AppException if the refresh token is invalid
-        :param refresh_token: refresh token
-        :return: payload as dict
-        """
-        try:
-            payload = jwt.decode(
-                refresh_token, self.secret_key, algorithms=[self.algorithm]
-            )
-            if payload.get("type") != "refresh":
-                raise AppException(
-                    ErrorCode.INVALID_JWT_TOKEN, "Token is not type refresh"
-                )
-            return payload
-        except jwt.ExpiredSignatureError:
-            raise AppException(ErrorCode.JWT_TOKEN_EXPIRED, "Refresh token has expired")
-        except jwt.InvalidTokenError:
+    def validate_refresh_token(self, refresh_token: str) -> JWTPayload:
+        payload = self.validate_token(refresh_token)
+        if payload.token_type != "refresh":
             raise AppException(
-                ErrorCode.INVALID_JWT_TOKEN, "Invalid token refresh token"
+                ErrorCode.INVALID_JWT_TOKEN,
+                f"Require JWT token type 'refresh' got '{payload.token_type}' instead.",
             )
+        return payload
 
     def validate_access_token(
         self, access_token: str, require_fresh: bool = False
-    ) -> dict[str, Any]:
-        """
-        Raises AppException if the access token is invalid
-        :param access_token: access token
-        :param require_fresh: require fresh token
-        :return: payload as dict
-        """
-        try:
-            payload = jwt.decode(
-                access_token, self.secret_key, algorithms=[self.algorithm]
-            )
-            if payload.get("type") != "access":
-                raise AppException(
-                    ErrorCode.INVALID_JWT_TOKEN, "Token is not type access"
-                )
-            if require_fresh and not payload.get("fresh"):
-                raise AppException(
-                    ErrorCode.JWT_TOKEN_NOT_FRESH, "Require fresh access token"
-                )
-            return payload
-        except jwt.ExpiredSignatureError:
-            raise AppException(ErrorCode.JWT_TOKEN_EXPIRED, "Access token has expired")
-        except jwt.InvalidTokenError as e:
+    ) -> JWTPayload:
+        payload = self.validate_token(access_token)
+        if payload.token_type != "access":
             raise AppException(
-                ErrorCode.INVALID_JWT_TOKEN, "Invalid token refresh token"
+                ErrorCode.INVALID_JWT_TOKEN,
+                f"Require JWT token type 'access' got '{payload.token_type} instead.'",
             )
+        if require_fresh and (not payload.fresh):
+            raise AppException(
+                ErrorCode.JWT_TOKEN_NOT_FRESH, f"Require fresh JWT access token"
+            )
+        return payload
 
 
 def get_jwt_service() -> JWTService:
@@ -157,85 +139,65 @@ def get_jwt_service() -> JWTService:
 
 JWTServiceDep = Annotated[JWTService, Depends(get_jwt_service)]
 
+AccessCookieDep = Annotated[
+    str | None, Cookie(alias=get_settings().JWT_ACCESS_COOKIE_NAME)
+]
+RefreshCookieDep = Annotated[
+    str | None, Cookie(alias=get_settings().JWT_REFRESH_COOKIE_NAME)
+]
 
-class JWTPayloadProvider:
+
+class AccessPayloadProvider:
     """
     A callable class for fastapi dependencies.
-    Use to decode, validate and provide JWT token stored on cookie.
-
-    Example:
-        @router.get("/require_jwt_token")
-        def func(
-            jwt_access_payload: AccessToken,
-            jwt_refresh_payload: RefreshToken,
-        ):
-            pass
+    Use to decode, validate and provide JWT access token stored on cookie.
     """
 
-    def __init__(
-        self,
-        token_type: Literal["access", "refresh"] = "access",
-        optional: bool = False,
-        fresh: bool = False,
-    ):
-        """
-
-        Args:
-            token_type: "access" or "refresh"
-            optional: if True return None when cookie not provided, otherwise raise AppException.
-            fresh: Use for access_token only, if True access_token mus be fresh(if not fresh raises AppException).
-        """
-
-        self.token_type: Literal["access", "refresh"] = token_type
-        self.optional: bool = optional
-        self.fresh: bool = fresh
+    def __init__(self, optional: bool = False, fresh: bool = False):
+        self.optional = optional
+        self.fresh = fresh
 
     def __call__(
-        self, request: Request, jwt_service: JWTServiceDep
+        self, jwt_service: JWTServiceDep, access_cookie: AccessCookieDep = None
     ) -> JWTPayload | None:
-        """
-        Validates JWT token from request cookies and return payload as dict.
-        If request cookies not provided and optional=False, raise AppException.
-        Args:
-            request: fastapi request object(auto-injected as dependency by fastapi)
-            jwt_service: jwt service object(auto-injected as dependency by fastapi)
-
-        Returns: JWTPayload
-
-        """
-        settings = get_settings()
-        cookie_name = (
-            settings.JWT_ACCESS_COOKIE_NAME
-            if (self.token_type == "access")
-            else settings.JWT_REFRESH_COOKIE_NAME
-        )
-        token = request.cookies.get(cookie_name)
-
-        if not token:
+        if access_cookie is None:
             if self.optional:
                 return None
             else:
-                raise AppException(ErrorCode.UNAUTHORIZED, "Require JWT Cookie")
-
-        payload = jwt_service.validate_token(token)
-
-        if self.fresh and not payload.fresh:
-            raise AppException(ErrorCode.JWT_TOKEN_NOT_FRESH, "Require fresh JWT token")
-
-        if self.token_type != payload.token_type:
-            raise AppException(
-                ErrorCode.INVALID_JWT_TOKEN,
-                f"Invalid token type. Expect '{self.token_type}' but got '{payload.token_type}' instead",
+                raise AppException(ErrorCode.UNAUTHORIZED, "Require JWT Access Cookie")
+        else:
+            return jwt_service.validate_access_token(
+                access_token=access_cookie, require_fresh=self.fresh
             )
-        return payload
 
 
-AccessToken = Annotated[JWTPayload, Depends(JWTPayloadProvider())]
+class RefreshPayloadProvider:
+    """
+    A callable class for fastapi dependencies.
+    Use to decode, validate and provide JWT refresh token stored on cookie.
+    """
 
-FreshAccessToken = Annotated[JWTPayload, Depends(JWTPayloadProvider(fresh=True))]
+    def __init__(self, optional: bool = False):
+        self.optional = optional
+
+    def __call__(
+        self, jwt_service: JWTServiceDep, refresh_cookie: RefreshCookieDep = None
+    ) -> JWTPayload | None:
+        if refresh_cookie is None:
+            if self.optional:
+                return None
+            else:
+                raise AppException(ErrorCode.UNAUTHORIZED, "Require JWT refresh Cookie")
+        else:
+            return jwt_service.validate_refresh_token(refresh_cookie)
+
+
+AccessToken = Annotated[JWTPayload, Depends(AccessPayloadProvider())]
+
+FreshAccessToken = Annotated[JWTPayload, Depends(AccessPayloadProvider(fresh=True))]
 
 OptionalAccessToken = Annotated[
-    JWTPayload | None, Depends(JWTPayloadProvider(optional=True))
+    JWTPayload | None, Depends(AccessPayloadProvider(optional=True))
 ]
 
-RefreshToken = Annotated[JWTPayload, Depends(JWTPayloadProvider(token_type="refresh"))]
+RefreshToken = Annotated[JWTPayload, Depends(RefreshPayloadProvider())]

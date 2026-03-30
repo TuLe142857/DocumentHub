@@ -1,7 +1,8 @@
+import datetime
 from typing import Annotated, Sequence
 
 from fastapi import Depends
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode
@@ -62,8 +63,83 @@ class ReportService:
             )
         )
 
-    def handler_all_report_of_document(self, document_id: int, admin_id: int):
-        pass
+    def list_reported_documents(
+        self, page: int, limit: int
+    ) -> tuple[Sequence[Document], int]:
+        stmt = (
+            select(Document)
+            .join(DocumentReport)
+            .where(DocumentReport.status == ReportStatus.PENDING)
+            .distinct()
+        )
+
+        count = (
+            self.db_session.execute(
+                select(func.count()).select_from(stmt.subquery())
+            ).scalars()
+            or 0
+        )
+        if count == 0:
+            return [], 0
+
+        res = (
+            self.db_session.execute(stmt.offset((page - 1) * limit).limit(limit))
+            .scalars()
+            .all()
+        )
+
+        return res, count
+
+    def list_pending_reports(
+        self, document_id: int, page: int = 1, limit: int = 10
+    ) -> tuple[Sequence[DocumentReport], int]:
+        return self.crud_report.get_multi(
+            DocumentReport.status == ReportStatus.PENDING,
+            DocumentReport.document_id == document_id,
+            skip=(page - 1) * limit,
+            limit=limit,
+        )
+
+    def handler_all_report_of_document(
+        self, document_id: int, admin_id: int, accept: bool, note: str | None
+    ):
+        admin: User = self.crud_user.get(
+            admin_id,
+            on_not_found=AppException(ErrorCode.INVALID_CREDENTIALS, "User not found"),
+        )
+        if admin.role.name != "ADMIN":
+            raise AppException(ErrorCode.FORBIDDEN)
+
+        document = self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
+
+        if accept:
+            document.banned_at = datetime.datetime.now(datetime.timezone.utc)
+            document.status = DocumentStatus.BANNED
+
+        self.db_session.execute(
+            update(DocumentReport)
+            .where(
+                DocumentReport.document_id == document_id,
+                DocumentReport.status == ReportStatus.PENDING,
+            )
+            .values(status=ReportStatus.RESOLVED if accept else ReportStatus.REJECTED)
+        )
+
+        mod_log = ModerationLog(
+            admin_id=admin_id,
+            document_id=document_id,
+            action=ModerationAction.BAN_DOCUMENT
+            if accept
+            else ModerationAction.REJECT_REPORT,
+            note=note,
+        )
+
+        self.db_session.add(mod_log)
 
 
 def get_report_service(

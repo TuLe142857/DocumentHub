@@ -90,6 +90,7 @@ class Document(ORMBase):
     collection_items: Mapped[List["CollectionItem"]] = relationship(
         back_populates="document"
     )
+    reports: Mapped[list["DocumentReport"]] = relationship(back_populates="document")
 
     __table_args__ = (
         UniqueConstraint("owner_id", "title", name="unique_document_title"),

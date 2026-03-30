@@ -27,7 +27,7 @@ class UserService:
 
     def list_user(
         self,
-        filter_email: str|None=None,
+        filter_email: str | None = None,
         filter_name: str | None = None,
         filter_is_active: bool | None = None,
         page: int = 1,
@@ -115,6 +115,22 @@ class UserService:
         profile = self.crud_profile.get_by_user_id(user_id)
         profile.avatar_object_key = avatar_obj_key
         self.db_session.flush()
+
+    def ban_user(self, user_id: int, admin_id: int, reason: str):
+        user = self.crud_user.get(
+            user_id,
+            on_not_found=AppException(ErrorCode.INVALID_CREDENTIALS, "User not found"),
+        )
+        user.is_active = False
+        # send email ....
+
+    def unban_user(self, user_id: int, admin_id: int):
+        user = self.crud_user.get(
+            user_id,
+            on_not_found=AppException(ErrorCode.INVALID_CREDENTIALS, "User not found"),
+        )
+        user.is_active = False
+        # send email ....
 
 
 def get_user_service(

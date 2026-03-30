@@ -10,6 +10,6 @@ from app.core import (
 router = APIRouter(prefix="/documents")
 
 
-@router.post("/documents/{document_id}/unban", response_model=ResponseSuccessSchema)
+@router.post("/{document_id}/unban", response_model=ResponseSuccessSchema)
 def unban_document():
     return APIResponse.ok()

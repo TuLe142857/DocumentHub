@@ -1,10 +1,19 @@
-from fastapi import APIRouter, Query
 from typing import Annotated
-from app.core import APIResponse, ResponsePaginationSchema, ResponseSuccessSchema, AppException, ErrorCode
+
+from fastapi import APIRouter, Body, Query
+
+from app.core import (
+    APIResponse,
+    AppException,
+    ErrorCode,
+    ResponsePaginationSchema,
+    ResponseSuccessSchema,
+)
 from app.core.sercurity import AccessToken
-from app.schemas.user_schema import UserSearchQuery, UserSchema
-from app.services.user_service import UserServiceDep
+from app.schemas.user_schema import UserSchema, UserSearchQuery
 from app.services.auth_service import AuthServiceDep
+from app.services.user_service import UserServiceDep
+
 router = APIRouter(prefix="/users")
 
 
@@ -35,10 +44,27 @@ def get_user_list(
 
 
 @router.post("/{user_id}/ban", response_model=ResponseSuccessSchema)
-def ban(user_id: int):
+def ban(
+    user_id: int,
+    reason: Annotated[str, Body()],
+    access_token: AccessToken,
+    auth_service: AuthServiceDep,
+    user_service: UserServiceDep,
+):
+    if not auth_service.is_admin(int(access_token.sub)):
+        raise AppException(ErrorCode.FORBIDDEN)
+    user_service.ban_user(user_id, admin_id=int(access_token.sub), reason=reason)
     return APIResponse.ok()
 
 
 @router.post("/{user_id}/unban", response_model=ResponseSuccessSchema)
-def unban(user_id: int):
+def unban(
+    user_id: int,
+    access_token: AccessToken,
+    auth_service: AuthServiceDep,
+    user_service: UserServiceDep,
+):
+    if not auth_service.is_admin(int(access_token.sub)):
+        raise AppException(ErrorCode.FORBIDDEN)
+    user_service.unban_user(user_id, admin_id=int(access_token.sub))
     return APIResponse.ok()

@@ -1,9 +1,9 @@
+import datetime
 import io
 import logging
-import datetime
-from celery import shared_task
 
-from sqlalchemy import select
+from celery import shared_task
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.orm import Session
 
 from app.core import (
@@ -20,7 +20,7 @@ from app.dependencies import (
 )
 from app.models import Document, DocumentStatus
 from app.utils.file_utils import count_pdf_pages, extract_pdf_thumbnail
-from sqlalchemy import delete, or_, and_
+
 
 @shared_task
 def generate_document_preview_task(document_id: int):
@@ -90,16 +90,24 @@ def generate_document_preview_task(document_id: int):
         document.page_count = total_pages
         session.commit()
 
+
 @shared_task
 def auto_delete_document_task():
     engine = get_db_engine()
-    threshold_date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=30)
+    threshold_date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+        days=30
+    )
     with Session(engine) as session:
         try:
             stmt = delete(Document).where(
                 or_(
-                    and_(Document.deleted_at != None, Document.deleted_at < threshold_date),
-                    and_(Document.banned_at != None, Document.banned_at < threshold_date),
+                    and_(
+                        Document.deleted_at != None,
+                        Document.deleted_at < threshold_date,
+                    ),
+                    and_(
+                        Document.banned_at != None, Document.banned_at < threshold_date
+                    ),
                 )
             )
 

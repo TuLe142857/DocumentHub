@@ -23,7 +23,8 @@ class PaginationQuery(BaseModel):
 
     page: Annotated[int, Field(ge=1, default=1, description="Page number")]
     limit: Annotated[
-        int, Field(ge=1, default=10, description="Maximum number of items per page")
+        int,
+        Field(ge=1, le=100, default=10, description="Maximum number of items per page"),
     ]
 
 

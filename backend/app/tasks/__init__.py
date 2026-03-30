@@ -1,2 +1,2 @@
-from .document_task import generate_document_preview_task, auto_delete_document_task
+from .document_task import auto_delete_document_task, generate_document_preview_task
 from .email_task import send_email_task

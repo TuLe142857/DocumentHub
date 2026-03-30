@@ -57,7 +57,8 @@ class DocumentReport(ORMBase):
 
     reporter: Mapped["User"] = relationship()
     report_reason: Mapped["ReportReason"] = relationship()
-    document: Mapped["Document"] = relationship()
+    document: Mapped["Document"] = relationship(back_populates="reports")
+    reason: Mapped["ReportReason"] = relationship()
 
 
 class ModerationLog(ORMBase):
