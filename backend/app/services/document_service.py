@@ -157,7 +157,7 @@ class DocumentService:
         # call task to generate preview version(pdf) for document
         generate_document_preview_task.delay(document_id=new_document.id)
 
-    def select_document_by_user(self, user_id: int, document_id: int) -> Document:
+    def view_document(self, user_id: int, document_id: int) -> Document:
         err = self.access_control.can_view_document(user_id, document_id)
         if err:
             raise err

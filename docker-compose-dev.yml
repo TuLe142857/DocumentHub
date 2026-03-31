@@ -1,3 +1,10 @@
+x-backend-build-conf: &backend-build
+  context: ./backend
+  target: dev
+  args:
+    UID: ${UID-1000}
+    GID: ${GID-1000}
+
 services:
   proxy:
     volumes:
@@ -9,24 +16,6 @@ services:
     ports:
       - "${NGINX_PORT_EXTERNAL:-80}:80"
 
-  backend:
-    build:
-      context: ./backend
-      target: dev
-      args:
-        UID: ${UID-1000}
-        GID: ${GID-1000}
-    volumes:
-      # DO NOT MOUNT ./backend:/app. This will override /app/.venv with your ./backend/.venv which may raise error
-      - ./backend/app/:/app/app/
-      - ./backend/pyproject.toml:/app/pyproject.toml
-      - ./backend/uv.lock:/app/uv.lock
-      - ./backend/test_reports/:/app/test_reports/
-      - ./backend/tests/:/app/tests/
-      - ./backend/scripts:/app/scripts/
-    ports:
-      - "${BACKEND_PORT_EXTERNAL:-8000}:8000"
-
   frontend:
     build:
       context: ./frontend
@@ -37,26 +26,52 @@ services:
     ports:
       - "${FRONTEND_PORT_EXTERNAL:-5173}:5173"
 
+  backend:
+    build:
+      <<: *backend-build
+    volumes:
+      # DO NOT MOUNT ./backend:/app. This will override /app/.venv with your ./backend/.venv which may raise error
+      - ./backend/app/:/app/app/
+      - ./backend/pyproject.toml:/app/pyproject.toml
+      - ./backend/uv.lock:/app/uv.lock
+      - ./backend/test_reports/:/app/test_reports/
+      - ./backend/tests/:/app/tests/
+      - ./backend/scripts:/app/scripts/
+    environment:
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_URL_OVERRIDE: http://localhost:${NGINX_PORT_EXTERNAL:-80}/minio
+    ports:
+      - "${BACKEND_PORT_EXTERNAL:-8000}:8000"
+
   celery_worker:
     build:
-      context: ./backend
-      target: dev
-      args:
-        UID: ${UID-1000}
-        GID: ${GID-1000}
+      <<: *backend-build
     volumes:
       # DO NOT MOUNT ./backend:/app. This will override /app/.venv with your ./backend/.venv which may raise error
       - ./backend/app:/app/app
       - ./backend/pyproject.toml:/app/pyproject.toml
       - ./backend/uv.lock:/app/uv.lock
+    environment:
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_URL_OVERRIDE: http://localhost:${NGINX_PORT_EXTERNAL:-80}/minio
     command: watchfiles "celery worker --loglevel=DEBUG --concurrency=4" app
 
   celery_beat:
+    build:
+      <<: *backend-build
+    volumes:
+      # DO NOT MOUNT ./backend:/app. This will override /app/.venv with your ./backend/.venv which may raise error
+      - ./backend/app:/app/app
+      - ./backend/pyproject.toml:/app/pyproject.toml
+      - ./backend/uv.lock:/app/uv.lock
+    environment:
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_URL_OVERRIDE: http://localhost:${NGINX_PORT_EXTERNAL:-80}/minio
     command: watchfiles "celery beat --loglevel=DEBUG"
 
   db:
     volumes:
-      - ./docker/mysql/init/:/docker-entrypoint-initdb.d/
+#      - ./docker/mysql/init/:/docker-entrypoint-initdb.d/
       - ./docker/backup/mysql:/var/backup/mysql/
       - db_data_dev:/var/lib/mysql
     ports:
@@ -106,6 +121,7 @@ services:
     environment:
       API_ENABLE_DEBUG_ROUTE: true
       LIBREOFFICE_AUTO_START: true
+
 volumes:
   db_data_dev:
   redis_data_dev:

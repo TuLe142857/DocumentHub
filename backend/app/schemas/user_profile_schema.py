@@ -1,18 +1,45 @@
-from typing import Annotated
+from typing import Annotated, Any, Callable
+from urllib.parse import urlparse
 
 from fastapi import UploadFile
 from pydantic import AfterValidator, AliasPath, BaseModel, ConfigDict, Field
 
 from app.core import AppException, ErrorCode, PaginationQuery, get_settings
+from app.dependencies import get_s3
 from app.models import Gender
-from app.schemas.validate import validate_s3_url
 from app.utils import get_file_extension
 
 
 class UserProfileResponse(BaseModel):
     @staticmethod
+    def generate_s3_presigned_url(
+        bucket: str,
+        expires_in: int = 5 * 60,
+        extra_params: dict[str, Any] | None = None,
+        base_url: str | None = None,
+    ) -> Callable[[str], str]:
+        params = extra_params if (extra_params is not None) else dict()
+        params["Bucket"] = bucket
+
+        def validate_function(key: str) -> str:
+            s3 = get_s3()
+            params["Key"] = key
+            url = s3.generate_presigned_url(
+                "get_object",
+                Params=params,
+                ExpiresIn=expires_in,
+            )
+            if base_url is not None:
+                parsed_url = urlparse(url)
+                final_url = base_url + parsed_url.path + "?" + parsed_url.query
+                return final_url
+            return url
+
+        return validate_function
+
+    @staticmethod
     def convert_avatar_object_key(v: str | None) -> str | None:
-        validator = validate_s3_url(
+        validator = UserProfileResponse.generate_s3_presigned_url(
             bucket=get_settings().S3_IMAGES_BUCKET,
             expires_in=5 * 60,
             base_url=get_settings().S3_PUBLIC_URL_OVERRIDE,

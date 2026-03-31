@@ -11,13 +11,57 @@ from pydantic import (
     computed_field,
 )
 
-from app.core import get_settings
+from app.core import AppException, ErrorCode, get_settings
 from app.models import DocumentStatus, DocumentVisibility
-from app.schemas.validate import validate_file, validate_s3_url, validate_tag_name_list
 from app.utils import get_file_extension, md5_checksum, sha256_checksum
 
 
 class DocumentUploadFormRequest(BaseModel):
+    # ----------------------------------------------------
+    #               CUSTOM VALIDATOR
+    # ----------------------------------------------------
+    @staticmethod
+    def validate_file_name(file_name: str) -> str:
+        settings = get_settings()
+        index = file_name.rfind(".")
+        if index == -1:
+            raise AppException(
+                ErrorCode.UNSUPPORTED_FILE_TYPE,
+                f"Can not find file extension in filename '{file_name}'",
+            )
+        extension = file_name[index::]
+        if extension not in settings.SUPPORTED_FILE_TYPE:
+            raise AppException(
+                ErrorCode.UNSUPPORTED_FILE_TYPE,
+                f"File extension '{extension}' not supported",
+            )
+        return file_name
+
+    @staticmethod
+    def validate_file(file: UploadFile) -> UploadFile:
+        DocumentUploadFormRequest.validate_file_name(file.filename)
+        return file
+
+    @staticmethod
+    def validate_tag_name(tag_name: str) -> str:
+        tag_name = tag_name.strip()
+        if " " in tag_name:
+            raise AppException(
+                ErrorCode.VALIDATION_ERROR, f"Tag name cannot contain spaces {tag_name}"
+            )
+        if not tag_name.islower():
+            raise AppException(
+                ErrorCode.VALIDATION_ERROR, "Tag name cannot contain uppercase"
+            )
+        return tag_name
+
+    @staticmethod
+    def validate_tag_name_list(tag_names: list[str]) -> list[str]:
+        return [DocumentUploadFormRequest.validate_tag_name(_) for _ in tag_names]
+
+    # ----------------------------------------------------
+    #               FIELDS
+    # ----------------------------------------------------
     file: Annotated[UploadFile, Field(), AfterValidator(validate_file)]
 
     title: Annotated[str, Field()]
@@ -58,12 +102,6 @@ class DocumentSupportedTypeResponse(BaseModel):
 
 
 class DocumentSummaryResponse(BaseModel):
-    FILE_URL_VALIDATOR = validate_s3_url(
-        bucket=get_settings().S3_DOCUMENTS_BUCKET,
-        expires_in=5 * 60,
-        base_url=get_settings().S3_PUBLIC_URL_OVERRIDE,
-    )
-
     model_config = ConfigDict(from_attributes=True, extra="ignore")
 
     id: Annotated[int, Field()]
@@ -74,14 +112,15 @@ class DocumentSummaryResponse(BaseModel):
     # Flatten User object to its username string
     owner: Annotated[
         str,
-        Field(description="owner username"),
-        BeforeValidator(lambda owner: owner.username),
+        Field(
+            validation_alias=AliasPath("owner", "username"),
+            description="owner username",
+        ),
     ]
 
     file_thumbnail_url: Annotated[
         str,
         Field(validation_alias="thumbnail_object_key"),
-        BeforeValidator(FILE_URL_VALIDATOR),
     ]
 
     view_count: Annotated[int, Field()]
@@ -104,6 +143,12 @@ class DocumentSummaryResponse(BaseModel):
 
     file_type: Annotated[str, Field()]
 
+    @staticmethod
+    def from_object(obj: Any, thumbnail_url: str) -> "DocumentSummaryResponse":
+        res = DocumentSummaryResponse.model_validate(obj)
+        res.file_thumbnail_url = thumbnail_url
+        return res
+
 
 class DocumentDetailsResponse(DocumentSummaryResponse):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
@@ -113,13 +158,11 @@ class DocumentDetailsResponse(DocumentSummaryResponse):
     file_original_url: Annotated[
         str,
         Field(validation_alias="file_object_key"),
-        BeforeValidator(DocumentSummaryResponse.FILE_URL_VALIDATOR),
     ]
 
     file_preview_url: Annotated[
         str,
         Field(validation_alias="file_preview_object_key"),
-        BeforeValidator(DocumentSummaryResponse.FILE_URL_VALIDATOR),
     ]
     sha256sum: Annotated[str, Field()]
     md5sum: Annotated[str, Field()]
@@ -127,3 +170,13 @@ class DocumentDetailsResponse(DocumentSummaryResponse):
     view_count: Annotated[int, Field()]
     like_count: Annotated[int, Field()]
     download_count: Annotated[int, Field()]
+
+    @staticmethod
+    def from_object(
+        obj: Any, thumbnail_url: str, preview_url: str, original_url: str
+    ) -> "DocumentDetailsResponse":
+        res = DocumentDetailsResponse.model_validate(obj)
+        res.file_thumbnail_url = thumbnail_url
+        res.file_preview_url = preview_url
+        res.file_original_url = original_url
+        return res

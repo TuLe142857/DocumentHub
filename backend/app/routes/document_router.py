@@ -12,6 +12,7 @@ from app.schemas.category_schema import CategorySchema
 from app.schemas.document_schema import *
 from app.services.auth_service import AuthServiceDep
 from app.services.document_service import DocumentServiceDep
+from app.services.storage_service import StorageServiceDep
 
 router = APIRouter(prefix="/documents", tags=["Document"])
 
@@ -55,6 +56,7 @@ def get_document_list(
     access_token: AccessToken,
     document_service: DocumentServiceDep,
     auth_service: AuthServiceDep,
+    storage_service: StorageServiceDep,
     pagination: PaginationQueryDep,
 ):
     owner_id = auth_service.get_user_id(access_token)
@@ -63,7 +65,12 @@ def get_document_list(
         owner_id=owner_id, page=pagination.page, limit=pagination.limit
     )
 
-    response_data = [DocumentSummaryResponse.model_validate(_) for _ in doc_seq]
+    response_data = [
+        DocumentSummaryResponse.from_object(
+            _, storage_service.generate_presigned_url_for_document(_)[0]
+        )
+        for _ in doc_seq
+    ]
 
     return APIResponse.paginate(
         data=response_data,
@@ -103,12 +110,16 @@ def get_document_details(
     access_token: OptionalAccessToken,
     document_id: int,
     document_service: DocumentServiceDep,
+    storage_service: StorageServiceDep,
 ):
     user_id = int(access_token.sub) if (access_token is not None) else None
-    document = document_service.select_document_by_user(user_id, document_id)
+    document = document_service.view_document(user_id, document_id)
     if document is None:
         return APIResponse.error()
-    response_data = DocumentDetailsResponse.model_validate(document)
+    response_data = DocumentDetailsResponse.from_object(
+        document, *storage_service.generate_presigned_url_for_document(document)
+    )
+
     return APIResponse.ok(data=response_data)
 
 

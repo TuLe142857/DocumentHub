@@ -87,7 +87,7 @@ class Settings(BaseSettings):
 
     S3_DOCUMENTS_BUCKET: str = "documents"
     S3_IMAGES_BUCKET: str = "images"
-    S3_PUBLIC_URL_OVERRIDE: str | None = "http://localhost:80/minio"
+    S3_PUBLIC_URL_OVERRIDE: str | None = None
 
     GOTENBERG_ENDPOINT: str
 
