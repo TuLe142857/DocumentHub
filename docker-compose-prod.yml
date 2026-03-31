@@ -12,8 +12,8 @@ services:
       frontend:
         condition: service_started
     # Use cloudflare tunnel so, no need to expose port
-    ports:
-      - "80:80"
+#    ports:
+#      - "80:80"
 
   cloudflare:
     image: cloudflare/cloudflared:latest
