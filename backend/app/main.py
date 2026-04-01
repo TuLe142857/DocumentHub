@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core import (
     get_settings,
     register_exception_handlers,
+    setup_logging,
 )
 from app.dependencies import get_db_engine, get_gotenberg, get_redis, get_s3
 from app.models import *
@@ -46,6 +47,8 @@ def create_app() -> FastAPI:
     get_redis.cache_clear()
     get_s3.cache_clear()
     get_gotenberg.cache_clear()
+
+    setup_logging()
 
     app_instance = FastAPI(lifespan=custom_lifespan)
 
