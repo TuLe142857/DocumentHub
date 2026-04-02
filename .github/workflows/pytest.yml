@@ -10,8 +10,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+
       - run: cp .env.example .env
       - run: mkdir backend/test_reports
+
+      - name: Get UID/GID
+        run: |
+          echo "UID=$(id -u)" >> $GITHUB_ENV
+          echo "GID=$(id -g)" >> $GITHUB_ENV
       - run: make build
       - run: make test
   test-backend-v2:
@@ -24,7 +31,6 @@ jobs:
         run: whoami && id
 
       - name: Get UID/GID
-        id: ids
         run: |
           echo "UID=$(id -u)" >> $GITHUB_ENV
           echo "GID=$(id -g)" >> $GITHUB_ENV
