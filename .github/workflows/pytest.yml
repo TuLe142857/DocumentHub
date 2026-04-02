@@ -2,6 +2,8 @@ name: Run pytest
 on:
   push:
     branches: [master]
+  pull_request:
+    branches: [master]
 
 
 jobs:
@@ -10,11 +12,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
       - name: Setup
         run: |
           cp .env.example .env
           mkdir backend/test_reports
           echo "UID=$(id -u)" >> $GITHUB_ENV
           echo "GID=$(id -g)" >> $GITHUB_ENV
-          make build
-      - run: make test
+
+      - name: Build Docker
+        run: make build
+
+      - name: Run Test
+        run: make test
