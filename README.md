@@ -1,3 +1,4 @@
+[![Run pytest](https://github.com/TuLe142857/DocumentHub/actions/workflows/pytest.yml/badge.svg)](https://github.com/TuLe142857/DocumentHub/actions/workflows/pytest.yml)
 # Requirement
 - Python version: >= 3.12.x
 - Docker 
