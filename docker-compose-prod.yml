@@ -56,7 +56,6 @@ services:
 
   db:
     volumes:
-#      - ./docker/mysql/init/:/docker-entrypoint-initdb.d/
       - ./docker/backup/mysql/:/var/backup/mysql/
       - db_data_prod:/var/lib/mysql
 
