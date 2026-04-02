@@ -13,6 +13,7 @@ jobs:
       - name: Setup
         run: |
           cp .env.example .env
+          mkdir backend/test_reports
           echo "UID=$(id -u)" >> $GITHUB_ENV
           echo "GID=$(id -g)" >> $GITHUB_ENV
           make build
