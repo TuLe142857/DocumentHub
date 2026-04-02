@@ -11,12 +11,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Build docker
-        run: |
-          cp .env.example .env
+      - run: |
+        cp .env.example .env
 #          mkdir backend/test_reports
-          echo "UID=$(id -u)" >> $GITHUB_ENV
-          echo "GID=$(id -g)" >> $GITHUB_ENV
-          make build
+        echo "UID=$(id -u)" >> $GITHUB_ENV
+        echo "GID=$(id -g)" >> $GITHUB_ENV
+        make build
 
       - run: make test
