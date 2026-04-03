@@ -8,6 +8,7 @@ from app.core import (
     get_settings,
     register_exception_handlers,
     setup_logging,
+    get_logger
 )
 from app.dependencies import get_db_engine, get_gotenberg, get_redis, get_s3
 from app.models import *
@@ -22,6 +23,13 @@ def create_s3_bucket(bucket_name: str):
         get_s3().create_bucket(Bucket=bucket_name)
     except ClientError:
         pass
+
+def clear_settings_cache():
+    get_settings.cache_clear()
+    get_db_engine.cache_clear()
+    get_redis.cache_clear()
+    get_s3.cache_clear()
+    get_gotenberg.cache_clear()
 
 
 @asynccontextmanager
@@ -40,25 +48,21 @@ async def custom_lifespan(app_instance: FastAPI):
 
 
 def create_app() -> FastAPI:
-    # clear cache to reload setting from env
-    # this is for testing with custom config
-    get_settings.cache_clear()
-    get_db_engine.cache_clear()
-    get_redis.cache_clear()
-    get_s3.cache_clear()
-    get_gotenberg.cache_clear()
-
     setup_logging()
+    logger = get_logger()
+    settings = get_settings()
 
     app_instance = FastAPI(lifespan=custom_lifespan)
 
+
     app_instance.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.BACKEND_CORS_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    logger.info("CORS allowed: %s", settings.BACKEND_CORS_ORIGINS)
 
     register_exception_handlers(app_instance)
     register_api_router(app_instance)
