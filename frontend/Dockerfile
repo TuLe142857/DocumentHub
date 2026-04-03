@@ -1,5 +1,6 @@
 FROM node:24-alpine AS base
-
+ARG VITE_API_BASE_URL="http://localhost:8000"
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 FROM base AS dev
 WORKDIR /app
