@@ -12,6 +12,8 @@ export default function App() {
             try{
                 setLoading(true);
                 await api.get("/health");
+                setConnected(true);
+                setError(null);
             }catch(e){
                 setConnected(false);
                 setError(e?.response?.data?.message || e);
