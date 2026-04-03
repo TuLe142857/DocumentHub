@@ -7,6 +7,12 @@ x-health-check-config-default: &default-health-check
 x-backend-environment: &backend-environment
   ENVIRONMENT: ${ENVIRONMENT:?Variable is not set or empty}
 
+  BACKEND_CORS_ORIGINS: >
+    "
+    http://localhost:8000,
+    http://localhost:5173,
+    "
+
   JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Variable is not set or empty}
   JWT_ACCESS_TOKEN_EXPIRES: ${JWT_ACCESS_TOKEN_EXPIRES:?Variable is not set or empty}
   JWT_REFRESH_TOKEN_EXPIRES: ${JWT_REFRESH_TOKEN_EXPIRES:?Variable is not set or empty}
