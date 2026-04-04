@@ -2,9 +2,8 @@ import os
 
 from fastapi.testclient import TestClient
 import pytest
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from sqlalchemy.orm import Session
-from sqlalchemy.pool import StaticPool
 
 from app.dependencies import get_db_engine, get_db_session
 from app.main import celery_worker, create_app
@@ -64,6 +63,5 @@ def db_session(db_engine):
 
 @pytest.fixture
 def client(app, db_session):
-    app.dependency_overrides[get_db_session] = lambda: db_session
     with TestClient(app) as client:
         yield client

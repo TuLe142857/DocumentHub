@@ -1,8 +1,17 @@
 from functools import lru_cache
-from typing import List, Literal, Annotated, Any
+from typing import Annotated, Any, List, Literal
 
-from pydantic import MySQLDsn, RedisDsn, SecretStr, computed_field, model_validator, Field, BeforeValidator
+from pydantic import (
+    BeforeValidator,
+    Field,
+    MySQLDsn,
+    RedisDsn,
+    SecretStr,
+    computed_field,
+    model_validator,
+)
 from pydantic_settings import BaseSettings
+
 
 def parse_cors(v: Any) -> list[str] | str:
     if isinstance(v, str) and not v.startswith("["):
@@ -11,10 +20,13 @@ def parse_cors(v: Any) -> list[str] | str:
         return v
     raise ValueError(v)
 
+
 class Settings(BaseSettings):
     ENVIRONMENT: Literal["dev", "prod"] = "dev"
 
-    BACKEND_CORS_ORIGINS: Annotated[list[str], Field(), BeforeValidator(parse_cors)] = []
+    BACKEND_CORS_ORIGINS: Annotated[
+        list[str], Field(), BeforeValidator(parse_cors)
+    ] = []
 
     SUPPORTED_FILE_TYPE: List[str] = [".doc", ".docx", ".ppt", ".pptx", ".pdf"]
     MAX_FILE_SIZE: int = 5 * 1024 * 1024  # 5MB
