@@ -1,36 +1,42 @@
-import {default as api, API_BASE_URL} from "./api/api.js";
-import {useEffect, useState} from "react";
-import Loading from "./components/Loading.jsx";
+import { useEffect, useState } from 'react';
+import { useDispatch } from 'react-redux';
+import api from '@/api/api.js';
+import { fetchUserInfo } from '@/store/slice/userSlice.jsx';
+import Loading from '@/components/Loading.jsx';
+import AppRoutes from '@/routes/AppRoutes.jsx';
+import ConnectionError from '@/pages/ConnectionError.jsx';
 
 export default function App() {
-    const [connected, setConnected] = useState(false);
-    const [error, setError] = useState(null);
-    const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [connected, setConnected] = useState(false);
+  const dispatch = useDispatch();
 
-    useEffect(() => {
-        const ping = async () => {
-            try{
-                setLoading(true);
-                await api.get("/health");
-                setConnected(true);
-                setError(null);
-            }catch(e){
-                setConnected(false);
-                setError(e?.response?.data?.message || e);
-            }finally {
-                setLoading(false);
-            }
-        }
-        ping();
-    }, [])
+  useEffect(() => {
+    const ping = async () => {
+      try {
+        setIsLoading(true);
+        await api.get('/health');
+        setConnected(true);
+      } catch {
+        setConnected(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    ping();
+  }, []);
 
-    if (loading) return <Loading />;
+  useEffect(() => {
+    dispatch(fetchUserInfo());
+  }, [dispatch]);
 
-    return (
-        <>
-            <div>Hello World</div>
-            <div>Backend api url: {API_BASE_URL}</div>
-            <div>Backend status: {connected ? "connected" : `can not connected. Error: ${error}`}</div>
-        </>
-    )
+  if (isLoading) {
+    return <Loading />;
+  }
+
+  if (!connected) {
+    return <ConnectionError />;
+  }
+
+  return <AppRoutes />;
 }
