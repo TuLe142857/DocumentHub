@@ -6,8 +6,23 @@ from tests.utils.api_assertions import assert_response_error, assert_response_ok
 from tests.utils.db_fixture import category, document, role_user, user
 
 
-def test_get_document_supported_type(client):
-    assert_response_ok(client.get("/api/documents/supported_types"))
+def test_document_utilities_api(client):
+    # document supported types
+    supported_types = assert_response_ok(client.get("/api/documents/supported_types"))
+    assert isinstance(supported_types, list)
+    assert all(isinstance(t, str) for t in supported_types)
+
+    # document max size in bytes
+    max_size_bytes = assert_response_ok(client.get("/api/documents/max_size"))
+    assert isinstance(max_size_bytes, int)
+
+    # available document categories
+    categories = assert_response_ok(client.get("/api/documents/categories"))
+    assert isinstance(categories, list)
+    assert all(
+        (isinstance(cat.get("id"), int) and isinstance(cat.get("name"), str))
+        for cat in categories
+    )
 
 
 def test_upload_document_api(client, user, category):
