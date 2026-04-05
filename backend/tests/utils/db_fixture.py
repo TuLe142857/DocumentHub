@@ -86,3 +86,22 @@ def document(db_session, category, user):
     db_session.commit()
     print("[fixture] Create document for test success")
     return document
+
+
+@pytest.fixture
+def collection(db_session, user, document):
+    collection = Collection(owner_id=user.id, name="Test Collection")
+    collection.items.append(CollectionItem(document_id=document.id))
+    db_session.add(collection)
+    db_session.commit()
+    return collection
+
+
+@pytest.fixture
+def auth_client(client, user):
+    res = client.post(
+        "/auth/login", json={"identity": user.username, "password": "password12345"}
+    )
+    print(res.status_code)
+    assert res.status_code == 200
+    return client

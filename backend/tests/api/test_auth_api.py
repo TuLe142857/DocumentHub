@@ -13,7 +13,7 @@ def mock_otp(mocker: MockFixture):
 
 
 @pytest.mark.parametrize(
-    ["email", "username",  "password"],
+    ["email", "username", "password"],
     [("fake_mail@mail.com", "some_user", "12345678")],
 )
 def test_registration_flow_success(client, email, username, password, mock_otp):
