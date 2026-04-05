@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Form
+from fastapi import APIRouter, Form, Body, Path, Query
 
 from app.core import (
     APIResponse,
@@ -13,6 +13,8 @@ from app.schemas.document_schema import *
 from app.services.auth_service import AuthServiceDep
 from app.services.document_service import DocumentServiceDep
 from app.services.storage_service import StorageServiceDep
+from app.services.access_control_service import  AccessControlServiceDep
+
 
 router = APIRouter(prefix="/documents", tags=["Document"])
 
@@ -57,12 +59,12 @@ def get_document_list(
     document_service: DocumentServiceDep,
     auth_service: AuthServiceDep,
     storage_service: StorageServiceDep,
-    pagination: PaginationQueryDep,
+    query: Annotated[DocumentQuery, Query()],
 ):
     owner_id = auth_service.get_user_id(access_token)
 
     doc_seq, total_items = document_service.get_document_by_owner_id(
-        owner_id=owner_id, page=pagination.page, limit=pagination.limit
+        owner_id=owner_id, page=query.page, limit=query.limit, status=query.status
     )
 
     response_data = [
@@ -74,8 +76,8 @@ def get_document_list(
 
     return APIResponse.paginate(
         data=response_data,
-        current_page=pagination.page,
-        per_page=pagination.limit,
+        current_page=query.page,
+        per_page=query.limit,
         total_items=total_items,
     )
 
@@ -119,6 +121,7 @@ def get_document_details(
     response_data = DocumentDetailsResponse.from_object(
         document, *storage_service.generate_presigned_url_for_document(document)
     )
+    response_data.liked = document_service.is_liked(document_id, user_id)
 
     return APIResponse.ok(data=response_data)
 
@@ -134,7 +137,7 @@ def update_document(
 ):
     update_data = body.model_dump(exclude_unset=True)
     document_service.update_document(
-        user_id=int(access_token.sub), document_id=document_id, update_data=update_data
+        user_id=int(access_token.sub), document_id=document_id, **update_data
     )
     return APIResponse.ok(data=update_data)
 
@@ -156,16 +159,6 @@ def delete_document(
     return APIResponse.ok()
 
 
-@router.get(
-    "/trash", response_model=ResponseSuccessSchema[list[DocumentSummaryResponse]]
-)
-def get_trash(access_token: AccessToken, document_service: DocumentServiceDep):
-
-    documents_in_trash = document_service.get_trash_list(user_id=int(access_token.sub))
-    res = [DocumentSummaryResponse.model_validate(doc) for doc in documents_in_trash]
-    return APIResponse.ok(data=res)
-
-
 @router.post("/{document_id}/restore", response_model=ResponseSuccessSchema)
 def restore_document(
     access_token: AccessToken,
@@ -179,35 +172,35 @@ def restore_document(
 
 
 @router.post(
-    "/{document_id}/tags",
+    "/{document_id}/tags/{tag_name}",
     response_model=ResponseSuccessSchema,
-    summary="Add tag to document",
+    summary="Add one tag to document",
 )
 def add_tag(
     access_token: AccessToken,
     document_id: int,
-    tags: list[str],
+    tag_name: Annotated[str, Path()],
     document_service: DocumentServiceDep,
 ):
-    document_service.add_tags_to_document(
-        document_id=document_id, user_id=int(access_token.sub), tags=tags
+    document_service.add_tag_to_document(
+        document_id=document_id, user_id=int(access_token.sub), tag_name=tag_name
     )
     return APIResponse.ok()
 
 
 @router.delete(
-    "/{document_id}/tags",
+    "/{document_id}/tags/{tag_name}",
     response_model=ResponseSuccessSchema,
-    summary="Remove tag from document",
+    summary="Remove one tag from document",
 )
 def remove_tag(
     access_token: AccessToken,
     document_id: int,
-    tags: list[str],
+    tag_name: Annotated[str, Path()],
     document_service: DocumentServiceDep,
 ):
-    document_service.remove_tags_from_document(
-        document_id=document_id, user_id=int(access_token.sub), tags=tags
+    document_service.remove_tag_from_document(
+        document_id=document_id, user_id=int(access_token.sub), tag_name=tag_name
     )
     return APIResponse.ok()
 
@@ -236,3 +229,14 @@ def unlike_document(
         document_id=document_id, user_id=int(access_token.sub)
     )
     return APIResponse.ok()
+
+@router.get("/{document_id}/download", response_model=ResponseSuccessSchema[str])
+def download_document(
+        access_token: OptionalAccessToken,
+        document_id: int,
+        document_service: DocumentServiceDep,
+        document_type: Annotated[str, Query(description="Document format to download", alias="format")] = ".pdf",
+):
+    user_id = int(access_token.sub) if access_token else None
+    url = document_service.download_document(user_id=user_id, document_id=document_id, document_format=document_type)
+    return APIResponse.ok(data=url)
