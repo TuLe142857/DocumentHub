@@ -1,1 +1,0 @@
-CREATE DATABASE IF NOT EXISTS doc_hub_test;
