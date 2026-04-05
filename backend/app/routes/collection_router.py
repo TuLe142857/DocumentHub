@@ -44,9 +44,7 @@ def create_collection(
     name: Annotated[str, Body(embed=True, alias="name")],
     collection_service: CollectionServiceDep,
 ):
-    collection_service.create_collection(
-        owner_id=int(access_token.sub), name=name
-    )
+    collection_service.create_collection(owner_id=int(access_token.sub), name=name)
     return APIResponse.ok()
 
 

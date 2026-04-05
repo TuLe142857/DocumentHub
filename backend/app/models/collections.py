@@ -15,7 +15,9 @@ class Collection(ORMBase):
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
     owner: Mapped["User"] = relationship(back_populates="collections")
-    items: Mapped[List["CollectionItem"]] = relationship(back_populates="collection", cascade="all, delete-orphan")
+    items: Mapped[List["CollectionItem"]] = relationship(
+        back_populates="collection", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         UniqueConstraint("owner_id", "name", name="unique_collection_name"),

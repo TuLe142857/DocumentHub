@@ -89,6 +89,21 @@ def document(db_session, category, user):
 
 
 @pytest.fixture
+def report_reasons(db_session):
+    reasons = []
+    for r in [
+        "SPAM",
+        "SCAM",
+        "COPYRIGHT_VIOLATION",
+        "FAKE_CONTENT",
+    ]:
+        reason = ReportReason(code=r)
+        db_session.add(reason)
+        reasons.append(reason)
+    return reasons
+
+
+@pytest.fixture
 def collection(db_session, user, document):
     collection = Collection(owner_id=user.id, name="Test Collection")
     collection.items.append(CollectionItem(document_id=document.id))
