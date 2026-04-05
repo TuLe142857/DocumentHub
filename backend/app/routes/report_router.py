@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from app.core import APIResponse, ResponseSuccessSchema
 from app.core.sercurity.jwt import AccessToken
-from app.schemas.report_schemas import ReportReasonSchema
+from app.schemas.report_schemas import ReportReasonSchema, ReportRequest
 from app.services.report_service import ReportServiceDep
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -21,6 +21,14 @@ def get_available_report_reasons(report_service: ReportServiceDep):
 @router.post("/documents/{document_id}", response_model=ResponseSuccessSchema)
 def report_document(
     document_id: int,
+    body: ReportRequest,
     access_token: AccessToken,
+    report_service: ReportServiceDep,
 ):
+    report_service.report_document(
+        reporter_id=int(access_token.sub),
+        document_id=int(document_id),
+        reason=body.reason,
+        desc=body.desc,
+    )
     return APIResponse.ok()
