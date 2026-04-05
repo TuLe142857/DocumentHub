@@ -83,7 +83,9 @@ class StorageService:
             bucket=bucket,
             key=document.file_object_key,
             base_url=base_url,
-            extra_params={"ResponseContentDisposition": f"attachment; filename={document.title.replace(' ', '')}{document.file_type}"},
+            extra_params={
+                "ResponseContentDisposition": f"attachment; filename={document.title.replace(' ', '')}{document.file_type}"
+            },
         )
 
         pdf_url = self.generate_s3_presigned_url(
@@ -91,7 +93,9 @@ class StorageService:
             key=document.file_preview_object_key,
             base_url=base_url,
             response_content_type="Application/pdf",
-            extra_params={"ResponseContentDisposition": f"attachment; filename={document.title.replace(' ', '')}.pdf"},
+            extra_params={
+                "ResponseContentDisposition": f"attachment; filename={document.title.replace(' ', '')}.pdf"
+            },
         )
 
         return original_url, pdf_url

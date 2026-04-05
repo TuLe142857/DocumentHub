@@ -43,8 +43,8 @@ class DocumentService:
         self.redis_client = redis_client
         self.s3_client = s3_client
 
-    def get_document_by_owner_id(
-        self, owner_id: int, page: int, limit: int, status: DocumentStatus|None=None
+    def list_self_documents(
+        self, owner_id: int, page: int, limit: int, status: DocumentStatus | None = None
     ) -> tuple[Sequence[Document], int]:
         skip = (page - 1) * limit
         if status is None:
@@ -61,7 +61,7 @@ class DocumentService:
                 limit=limit,
             )
 
-    def get_public_document_list(
+    def list_public_document(
         self, owner: int | str | User, page: int, limit: int
     ) -> tuple[Sequence[Document], int]:
         if isinstance(owner, User):
@@ -106,7 +106,7 @@ class DocumentService:
             viewer_id = viewer
 
         if viewer_id != owner_id:
-            return self.get_public_document_list(owner_id, page, limit)
+            return self.list_public_document(owner_id, page, limit)
         return self.crud_doc.get_multi(
             Document.owner_id == owner_id,
             Document.status == DocumentStatus.READY,
@@ -168,7 +168,11 @@ class DocumentService:
         # call task to generate preview version(pdf) for document
         generate_document_preview_task.delay(document_id=new_document.id)
 
-    def view_document(self, user_id: int, document_id: int) -> Document:
+    def view_document(self, user_id: int | None, document_id: int) -> Document:
+        """
+        Check permission and return document.
+        Increase document view.
+        """
         err = self.access_control.can_view_document(user_id, document_id)
         if err:
             raise err
@@ -184,45 +188,66 @@ class DocumentService:
             self.db_session.flush()
         return doc
 
-    def download_document(self, user_id: int, document_id: int, document_format: str=".pdf") -> str:
+    def download_document(
+        self, user_id: int, document_id: int, document_format: str = ".pdf"
+    ) -> str:
         """
+        Check permission and return download url. Increase download count.
         Returns: document presigned url for download
         """
-        document = self.crud_doc.get(document_id, on_not_found=AppException(ErrorCode.RESOURCE_NOT_FOUND, "Document not found"))
+        document = self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
 
         err = self.access_control.can_view_document(user_id, document)
         if err:
             raise err
         available_formats = {".pdf", document.file_type}
         if not (document_format in available_formats):
-            raise AppException(ErrorCode.UNSUPPORTED_FILE_TYPE, f"Invalid document format for download. Available formats: {available_formats}")
-
+            raise AppException(
+                ErrorCode.UNSUPPORTED_FILE_TYPE,
+                f"Invalid document format for download. Available formats: {available_formats}",
+            )
 
         redis_download_key = f"download:doc:{document_id}:user:{user_id}"
         if self.redis_client.set(redis_download_key, "1", ex=3600, nx=True):
             document.download_count += 1
             self.db_session.flush()
 
-        ori_url, pdf_url = self.storage_service.generate_download_url_for_document(document)
+        ori_url, pdf_url = self.storage_service.generate_download_url_for_document(
+            document
+        )
 
         if document_format == ".pdf":
             return pdf_url
         return ori_url
 
-    def is_liked(self, document_id:int, user_id: int):
-        return self.db_session.execute(
-            select(DocumentLike).where(DocumentLike.document_id == document_id, DocumentLike.user_id==user_id)
-        ).scalar_one_or_none() is not None
+    def is_liked(self, document_id: int, user_id: int):
+        """
+        Check if document is liked by a specified user.
+        """
+        return (
+            self.db_session.execute(
+                select(DocumentLike).where(
+                    DocumentLike.document_id == document_id,
+                    DocumentLike.user_id == user_id,
+                )
+            ).scalar_one_or_none()
+            is not None
+        )
 
     def update_document(
-        self, user_id: int,
-            document_id: int,
-            desc: str|None = None,
-            title: str|None = None,
-            category_id: int|None = None,
-            visibility: DocumentVisibility | None = None,
-            tags: list[str] | None = None
-
+        self,
+        user_id: int,
+        document_id: int,
+        desc: str | None = None,
+        title: str | None = None,
+        category_id: int | None = None,
+        visibility: DocumentVisibility | None = None,
+        tags: list[str] | None = None,
     ):
         """
         Any param left default None value will be ignored.
@@ -231,7 +256,12 @@ class DocumentService:
         err = self.access_control.can_update_document(user_id, document_id)
         if err:
             raise err
-        document = self.crud_doc.get(document_id, on_not_found=AppException(ErrorCode.RESOURCE_NOT_FOUND, "Document not found"))
+        document = self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
         update_dict = {}
         if desc:
             update_dict["desc"] = desc
@@ -244,13 +274,12 @@ class DocumentService:
 
         if tags:
             unique_tags = set(tags)
-            tags_override = [Tag.get_or_create(name, self.db_session) for name in unique_tags]
+            tags_override = [
+                Tag.get_or_create(name, self.db_session) for name in unique_tags
+            ]
             document.tags = tags_override
 
         self.crud_doc.update(document, update_dict)
-
-
-
 
     def add_tag_to_document(self, document_id: int, user_id: int, tag_name: str):
         err = self.access_control.can_update_document(user_id, document_id)
@@ -258,9 +287,7 @@ class DocumentService:
             raise err
         self.crud_doc.add_tags(self.crud_doc.get(document_id), [tag_name])
 
-    def remove_tag_from_document(
-        self, document_id: int, user_id: int, tag_name: str
-    ):
+    def remove_tag_from_document(self, document_id: int, user_id: int, tag_name: str):
         err = self.access_control.can_update_document(user_id, document_id)
         if err:
             raise err
@@ -284,16 +311,16 @@ class DocumentService:
             raise err
         self.crud_doc.soft_delete(self.crud_doc.get(document_id))
 
-    def get_trash_list(self, user_id: int) -> Sequence[Document]:
-        return (
-            self.db_session.execute(
-                select(Document).where(
-                    Document.owner_id == user_id, Document.deleted_at != None
-                )
-            )
-            .scalars()
-            .all()
-        )
+    # def get_trash_list(self, user_id: int) -> Sequence[Document]:
+    #     return (
+    #         self.db_session.execute(
+    #             select(Document).where(
+    #                 Document.owner_id == user_id, Document.deleted_at != None
+    #             )
+    #         )
+    #         .scalars()
+    #         .all()
+    #     )
 
     def restore_document(self, document_id: int, user_id: int):
         err = self.access_control.can_restore_document(user_id, document_id)
@@ -426,7 +453,13 @@ def get_document_service(
     s3_client: S3Dep,
 ) -> DocumentService:
     return DocumentService(
-        crud_doc, crud_user, access_control, storage_service, db_session, redis_client, s3_client
+        crud_doc,
+        crud_user,
+        access_control,
+        storage_service,
+        db_session,
+        redis_client,
+        s3_client,
     )
 
 

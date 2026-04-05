@@ -1,5 +1,3 @@
-from zoneinfo import available_timezones
-
 import pytest
 from sqlalchemy import select
 
@@ -72,28 +70,28 @@ def test_get_document_detail(client, user, category, document):
             "Document title updated",
             1,
             DocumentVisibility.PUBLIC.value,
-            None
+            None,
         ],
         [
             "Document desc updated",
             "Document title updated",
             1,
             DocumentVisibility.PRIVATE.value,
-            None
+            None,
         ],
         [
             "Document desc updated",
             "Document title updated",
             1,
             DocumentVisibility.PRIVATE.value,
-            []
+            [],
         ],
         [
             "Document desc updated",
             "Document title updated",
             1,
             DocumentVisibility.PRIVATE.value,
-            ["updated_tag1", "updated_tag2", "updated_tag3"]
+            ["updated_tag1", "updated_tag2", "updated_tag3"],
         ],
     ],
 )
@@ -146,10 +144,7 @@ def test_update_document_api_success(
         assert document_after_update.get("tags") == tags
 
 
-@pytest.mark.parametrize(
-    "tag_name",
-    ["tags1", "Tags1", "Tags_1"]
-)
+@pytest.mark.parametrize("tag_name", ["tags1", "Tags1", "Tags_1"])
 def test_document_tags_add_success(client, user, document, tag_name):
     # login
     assert_response_ok(
@@ -160,20 +155,14 @@ def test_document_tags_add_success(client, user, document, tag_name):
     )
 
     # add tags
-    assert_response_ok(
-        client.post(f"/api/documents/{document.id}/tags/{tag_name}")
-    )
+    assert_response_ok(client.post(f"/api/documents/{document.id}/tags/{tag_name}"))
 
     # check document after updated
     updated_doc = assert_response_ok(client.get(f"/api/documents/{document.id}"))
     assert tag_name in updated_doc.get("tags")
 
 
-
-@pytest.mark.parametrize(
-    "tag_name",
-    ["tags1", "Tags1", "Tags_1"]
-)
+@pytest.mark.parametrize("tag_name", ["tags1", "Tags1", "Tags_1"])
 def test_document_tags_remove_success(client, user, document, tag_name):
     assert_response_ok(
         client.post(
@@ -191,9 +180,7 @@ def test_document_tags_remove_success(client, user, document, tag_name):
     # check after remove
 
     updated_document = assert_response_ok(client.get(f"/api/documents/{document.id}"))
-    assert not(tag_name in updated_document.get("tags"))
-
-
+    assert not (tag_name in updated_document.get("tags"))
 
 
 def test_document_like_success(client, user, document):
@@ -209,6 +196,7 @@ def test_document_like_success(client, user, document):
     # check
     document = assert_response_ok(client.get(f"/api/documents/{document.id}"))
     assert document.get("liked") is True
+
 
 def test_document_remove_like_success(client, user, document):
     assert_response_ok(
@@ -235,7 +223,9 @@ def test_soft_delete_document_success(client, user, document):
     assert_response_ok(client.delete(f"/api/documents/{document.id}"))
 
     # check trash list
-    trash_list = assert_response_ok(client.get(f"/api/documents?status={DocumentStatus.DELETED.value}"))
+    trash_list = assert_response_ok(
+        client.get(f"/api/documents?status={DocumentStatus.DELETED.value}")
+    )
     assert any((d.get("id") == document.id for d in trash_list))
 
 
@@ -251,8 +241,11 @@ def test_restore_document_from_trash_success(client, user, document):
     assert_response_ok(client.delete(f"/api/documents/{document.id}"))
 
     assert_response_ok(client.post(f"/api/documents/{document.id}/restore"))
-    trash_list = assert_response_ok(client.get(f"/api/documents?status={DocumentStatus.DELETED.value}"))
+    trash_list = assert_response_ok(
+        client.get(f"/api/documents?status={DocumentStatus.DELETED.value}")
+    )
     assert all((d.get("id") != document.id for d in trash_list))
+
 
 def test_download_document(client, user, document):
     assert_response_ok(
@@ -262,8 +255,12 @@ def test_download_document(client, user, document):
         )
     )
 
-    available_formats = assert_response_ok(client.get(f"/api/documents/{document.id}")).get("available_formats")
+    available_formats = assert_response_ok(
+        client.get(f"/api/documents/{document.id}")
+    ).get("available_formats")
 
     for doc_type in available_formats:
-        url = assert_response_ok(client.get(f"/api/documents/{document.id}/download?format={doc_type}"))
+        url = assert_response_ok(
+            client.get(f"/api/documents/{document.id}/download?format={doc_type}")
+        )
         assert isinstance(url, str)

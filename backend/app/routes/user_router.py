@@ -80,7 +80,7 @@ def get_user_documents(
     document_service: DocumentServiceDep,
 ):
     if access_token is None:
-        doc_list, total = document_service.get_public_document_list(
+        doc_list, total = document_service.list_public_document(
             owner=username, page=pagination.page, limit=pagination.limit
         )
     else:

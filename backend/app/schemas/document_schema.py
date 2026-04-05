@@ -11,7 +11,7 @@ from pydantic import (
     computed_field,
 )
 
-from app.core import AppException, ErrorCode, get_settings, PaginationQuery
+from app.core import AppException, ErrorCode, PaginationQuery, get_settings
 from app.models import DocumentStatus, DocumentVisibility
 from app.utils import get_file_extension, md5_checksum, sha256_checksum
 
@@ -95,14 +95,16 @@ class DocumentUpdateRequest(BaseModel):
     title: Annotated[str | None, Field(default=None)]
     category_id: Annotated[int | None, Field(default=None)]
     visibility: Annotated[DocumentVisibility | None, Field(default=None)]
-    tags: Annotated[list[str]|None, Field(default=None)]
+    tags: Annotated[list[str] | None, Field(default=None)]
 
 
 class DocumentSupportedTypeResponse(BaseModel):
     supported_type: Annotated[list[str], Field()]
 
+
 class DocumentQuery(PaginationQuery):
-    status: Annotated[DocumentStatus|None, Field(default=None)]
+    status: Annotated[DocumentStatus | None, Field(default=None)]
+
 
 class DocumentSummaryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
@@ -156,7 +158,13 @@ class DocumentSummaryResponse(BaseModel):
 class DocumentDetailsResponse(DocumentSummaryResponse):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
 
-    liked: Annotated[bool, Field(default=False, description="Whether or not the document was liked by current user")]
+    liked: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="Whether or not the document was liked by current user",
+        ),
+    ]
     desc: Annotated[str | None, Field()]
     #
     # file_original_url: Annotated[
@@ -168,6 +176,7 @@ class DocumentDetailsResponse(DocumentSummaryResponse):
         str,
         Field(validation_alias="file_preview_object_key"),
     ]
+
     @computed_field(description="Available formats for download document. ")
     def available_formats(self) -> list[str]:
         if self.file_type == ".pdf":
