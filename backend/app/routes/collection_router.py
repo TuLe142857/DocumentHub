@@ -1,6 +1,11 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 
-from app.core import APIResponse, ResponseSuccessSchema
+from app.core import (
+    APIResponse,
+    PaginationQueryDep,
+    ResponsePaginationSchema,
+    ResponseSuccessSchema,
+)
 from app.core.sercurity import AccessToken
 from app.schemas.collection_schema import *
 from app.schemas.document_schema import DocumentSummaryResponse
@@ -9,52 +14,75 @@ from app.services.collection_service import CollectionServiceDep
 router = APIRouter(prefix="/collections", tags=["Collection"])
 
 
-@router.get("", response_model=ResponseSuccessSchema[list[CollectionSummaryResponse]])
+@router.get(
+    "",
+    response_model=ResponsePaginationSchema[str],
+    summary="Get all collections of current user",
+)
 def get_collection_list(
-    access_token: AccessToken, collection_service: CollectionServiceDep
+    access_token: AccessToken,
+    pagination: PaginationQueryDep,
+    collection_service: CollectionServiceDep,
 ):
-    collections = collection_service.list_collection(owner_id=int(access_token.sub))
+    collections, total = collection_service.list_collection(
+        owner_id=int(access_token.sub),
+        page=pagination.page,
+        limit=pagination.limit,
+    )
     res = [CollectionSummaryResponse.model_validate(obj) for obj in collections]
-    return APIResponse.ok(data=res)
+    return APIResponse.paginate(
+        current_page=pagination.page,
+        per_page=pagination.limit,
+        total_items=total,
+        data=res,
+    )
 
 
 @router.post("", response_model=ResponseSuccessSchema)
 def create_collection(
     access_token: AccessToken,
-    body: CollectionCreateRequest,
+    name: Annotated[str, Body(embed=True, alias="name")],
     collection_service: CollectionServiceDep,
 ):
-    collection_service.create_collection(owner_id=int(access_token.sub), name=body.name)
+    collection_service.create_collection(owner_id=int(access_token.sub), name=name)
     return APIResponse.ok()
 
 
 @router.get(
     "/{collection_id}/items",
-    response_model=ResponseSuccessSchema[list[DocumentSummaryResponse]],
+    response_model=ResponsePaginationSchema[DocumentSummaryResponse],
     summary="Get documents in collection",
 )
 def get_documents_in_collection(
     access_token: AccessToken,
     collection_id: int,
     collection_service: CollectionServiceDep,
+    pagination: PaginationQueryDep,
 ):
-    documents = collection_service.list_document(
+    documents, total = collection_service.list_document(
         user_id=int(access_token.sub),
         collection_id=int(collection_id),
+        page=pagination.page,
+        limit=pagination.limit,
     )
     res = [DocumentSummaryResponse.model_validate(obj) for obj in documents]
-    return APIResponse.ok(data=res)
+    return APIResponse.paginate(
+        current_page=pagination.page,
+        per_page=pagination.limit,
+        total_items=total,
+        data=res,
+    )
 
 
 @router.patch("/{collection_id}", response_model=ResponseSuccessSchema)
 def rename_collection(
     access_token: AccessToken,
     collection_id: int,
-    body: CollectionRenameRequest,
+    new_name: Annotated[str, Body(embed=True)],
     collection_service: CollectionServiceDep,
 ):
     collection_service.rename_collection(
-        user_id=int(access_token.sub), collection_id=collection_id, new_name=body.name
+        user_id=int(access_token.sub), collection_id=collection_id, new_name=new_name
     )
     return APIResponse.ok()
 

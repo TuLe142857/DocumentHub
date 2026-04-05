@@ -32,9 +32,8 @@ class ReportedDocumentSchema(DocumentSummaryResponse):
 
 
 class ReportRequest(BaseModel):
-    document_id: Annotated[int, Field()]
     reason: Annotated[int, Field(description="ReportReason.id")]
-    desc: Annotated[str, Field(description="Report reason description")]
+    desc: Annotated[str, Field(default="", description="Report reason description")]
 
 
 class ReportHandleRequest(BaseModel):

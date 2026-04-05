@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Form, Body, Path, Query
+from fastapi import APIRouter, Body, Form, Path, Query
 
 from app.core import (
     APIResponse,
@@ -13,32 +13,38 @@ from app.schemas.document_schema import *
 from app.services.auth_service import AuthServiceDep
 from app.services.document_service import DocumentServiceDep
 from app.services.storage_service import StorageServiceDep
-from app.services.access_control_service import  AccessControlServiceDep
-
 
 router = APIRouter(prefix="/documents", tags=["Document"])
 
 
 @router.get(
     "/supported_types",
-    response_model=ResponseSuccessSchema[DocumentSupportedTypeResponse],
+    response_model=ResponseSuccessSchema[list[str]],
     summary="Get supported document types",
-    description="Get supported document types",
+    description="Returns a list of supported document file types as extensions (e.g. '.pdf', '.docx').",
 )
 def get_supported_types():
-    res_data = DocumentSupportedTypeResponse(
-        supported_type=get_settings().SUPPORTED_FILE_TYPE
-    )
-    return APIResponse.ok(data=res_data)
+    settings = get_settings()
+    return APIResponse.ok(data=settings.SUPPORTED_FILE_TYPE)
 
 
-@router.get("/max_size", response_model=ResponseSuccessSchema[int])
+@router.get(
+    "/max_size",
+    response_model=ResponseSuccessSchema[int],
+    summary="Get max upload file size",
+    description="Returns the maximum supported document upload size in bytes.",
+)
 def get_max_supported_document_size_bytes():
     settings = get_settings()
     return APIResponse.ok(data=settings.MAX_FILE_SIZE)
 
 
-@router.get("/categories", response_model=ResponseSuccessSchema[list[CategorySchema]])
+@router.get(
+    "/categories",
+    response_model=ResponseSuccessSchema[list[CategorySchema]],
+    summary="List categories",
+    description="Returns a list of all available document categories.",
+)
 def get_categories(document_service: DocumentServiceDep, db_session: DBSessionDep):
     from sqlalchemy import select
 
@@ -52,7 +58,8 @@ def get_categories(document_service: DocumentServiceDep, db_session: DBSessionDe
 @router.get(
     "",
     response_model=ResponsePaginationSchema[DocumentSummaryResponse],
-    summary="Get documents list of current user",
+    summary="Get user documents. Require login.",
+    description="Returns a paginated list of documents owned by the current user.",
 )
 def get_document_list(
     access_token: AccessToken,
@@ -63,7 +70,7 @@ def get_document_list(
 ):
     owner_id = auth_service.get_user_id(access_token)
 
-    doc_seq, total_items = document_service.get_document_by_owner_id(
+    doc_seq, total_items = document_service.list_self_documents(
         owner_id=owner_id, page=query.page, limit=query.limit, status=query.status
     )
 
@@ -82,7 +89,12 @@ def get_document_list(
     )
 
 
-@router.post("", response_model=ResponseSuccessSchema)
+@router.post(
+    "",
+    response_model=ResponseSuccessSchema,
+    summary="Upload document. Require login",
+    description="Upload a new document.",
+)
 def upload_document(
     body: Annotated[DocumentUploadFormRequest, Form(media_type="multipart/form-data")],
     access_token: AccessToken,
@@ -107,6 +119,7 @@ def upload_document(
     "/{document_id}",
     response_model=ResponseSuccessSchema[DocumentDetailsResponse],
     summary="Get document details",
+    description="Retrieve detailed information of a specific document.",
 )
 def get_document_details(
     access_token: OptionalAccessToken,
@@ -115,25 +128,29 @@ def get_document_details(
     storage_service: StorageServiceDep,
 ):
     user_id = int(access_token.sub) if (access_token is not None) else None
+
     document = document_service.view_document(user_id, document_id)
-    if document is None:
-        return APIResponse.error()
+
     response_data = DocumentDetailsResponse.from_object(
         document, *storage_service.generate_presigned_url_for_document(document)
     )
+
+    # check document was liked by current user
     response_data.liked = document_service.is_liked(document_id, user_id)
 
     return APIResponse.ok(data=response_data)
 
 
 @router.patch(
-    "/{document_id}", response_model=ResponseSuccessSchema[DocumentUpdateRequest]
+    "/{document_id}",
+    response_model=ResponseSuccessSchema[DocumentUpdateRequest],
+    summary="Update document",
 )
 def update_document(
+    document_service: DocumentServiceDep,
     access_token: AccessToken,
     document_id: int,
     body: DocumentUpdateRequest,
-    document_service: DocumentServiceDep,
 ):
     update_data = body.model_dump(exclude_unset=True)
     document_service.update_document(
@@ -145,13 +162,13 @@ def update_document(
 @router.delete(
     "/{document_id}",
     response_model=ResponseSuccessSchema,
-    summary="Soft Delete document",
-    description="Move the document to the trash. Items in the trash are permanently deleted after 30 days, but can be restored anytime before that.",
+    summary="Move document to trash",
+    description="Soft delete a document. It can be restored before permanent deletion.",
 )
 def delete_document(
+    document_service: DocumentServiceDep,
     access_token: FreshAccessToken,
     document_id: int,
-    document_service: DocumentServiceDep,
 ):
     document_service.soft_delete_document(
         document_id=document_id, user_id=int(access_token.sub)
@@ -159,11 +176,16 @@ def delete_document(
     return APIResponse.ok()
 
 
-@router.post("/{document_id}/restore", response_model=ResponseSuccessSchema)
+@router.post(
+    "/{document_id}/restore",
+    response_model=ResponseSuccessSchema,
+    summary="Restore document",
+    description="Restore a document from the trash.",
+)
 def restore_document(
+    document_service: DocumentServiceDep,
     access_token: AccessToken,
     document_id: int,
-    document_service: DocumentServiceDep,
 ):
     document_service.restore_document(
         document_id=document_id, user_id=int(access_token.sub)
@@ -174,7 +196,7 @@ def restore_document(
 @router.post(
     "/{document_id}/tags/{tag_name}",
     response_model=ResponseSuccessSchema,
-    summary="Add one tag to document",
+    summary="Add tag to document",
 )
 def add_tag(
     access_token: AccessToken,
@@ -191,7 +213,7 @@ def add_tag(
 @router.delete(
     "/{document_id}/tags/{tag_name}",
     response_model=ResponseSuccessSchema,
-    summary="Remove one tag from document",
+    summary="Remove tag from document",
 )
 def remove_tag(
     access_token: AccessToken,
@@ -206,7 +228,10 @@ def remove_tag(
 
 
 @router.post(
-    "/{document_id}/like", response_model=ResponseSuccessSchema, summary="Like document"
+    "/{document_id}/like",
+    response_model=ResponseSuccessSchema,
+    summary="Like document",
+    description="Mark a document as liked by the current user.",
 )
 def like_document(
     access_token: AccessToken, document_id: int, document_service: DocumentServiceDep
@@ -220,7 +245,8 @@ def like_document(
 @router.delete(
     "/{document_id}/like",
     response_model=ResponseSuccessSchema,
-    summary="UnLike document",
+    summary="Unlike document",
+    description="Remove like from a document.",
 )
 def unlike_document(
     access_token: AccessToken, document_id: int, document_service: DocumentServiceDep
@@ -230,13 +256,23 @@ def unlike_document(
     )
     return APIResponse.ok()
 
-@router.get("/{document_id}/download", response_model=ResponseSuccessSchema[str])
+
+@router.get(
+    "/{document_id}/download",
+    response_model=ResponseSuccessSchema[str],
+    summary="Download document",
+    description="Download a document in the specified format. Response data is a url for download.",
+)
 def download_document(
-        access_token: OptionalAccessToken,
-        document_id: int,
-        document_service: DocumentServiceDep,
-        document_type: Annotated[str, Query(description="Document format to download", alias="format")] = ".pdf",
+    access_token: OptionalAccessToken,
+    document_id: int,
+    document_service: DocumentServiceDep,
+    document_type: Annotated[
+        str, Query(description="Document format to download", alias="format")
+    ] = ".pdf",
 ):
     user_id = int(access_token.sub) if access_token else None
-    url = document_service.download_document(user_id=user_id, document_id=document_id, document_format=document_type)
+    url = document_service.download_document(
+        user_id=user_id, document_id=document_id, document_format=document_type
+    )
     return APIResponse.ok(data=url)

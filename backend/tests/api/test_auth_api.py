@@ -13,7 +13,7 @@ def mock_otp(mocker: MockFixture):
 
 
 @pytest.mark.parametrize(
-    "email, username, password",
+    ["email", "username", "password"],
     [("fake_mail@mail.com", "some_user", "12345678")],
 )
 def test_registration_flow_success(client, email, username, password, mock_otp):
@@ -40,11 +40,11 @@ def test_registration_flow_success(client, email, username, password, mock_otp):
     """
 
     # registration
-    assert_response_ok(client.post("/api/auth/register/request", json={"email": email}))
+    assert_response_ok(client.post("auth/register/request", json={"email": email}))
 
     assert_response_ok(
         client.post(
-            "/api/auth/register/verify",
+            "/auth/register/verify",
             json={
                 "email": email,
                 "otp_code": "otp_code",
@@ -54,7 +54,7 @@ def test_registration_flow_success(client, email, username, password, mock_otp):
 
     assert_response_ok(
         client.post(
-            "/api/auth/register/complete",
+            "/auth/register/complete",
             json={
                 "email": email,
                 "registration_code": "otp_code",
@@ -65,51 +65,49 @@ def test_registration_flow_success(client, email, username, password, mock_otp):
     )
 
     # check auto login after complete registration
-    assert_response_ok(client.get("/api/auth/whoami"))
+    assert_response_ok(client.get("/auth/whoami"))
 
     # test logout
-    assert_response_ok(client.post("/api/auth/logout"))
+    assert_response_ok(client.post("/auth/logout"))
     assert_response_error(
-        client.get("/api/auth/whoami"), expected_error=ErrorCode.UNAUTHORIZED
+        client.get("/auth/whoami"), expected_error=ErrorCode.UNAUTHORIZED
     )
 
     # test login by email
     assert_response_ok(
         client.post(
-            "/api/auth/login",
+            "/auth/login",
             json={
                 "identity": email,
                 "password": password,
             },
         )
     )
-    assert_response_ok(client.get("/api/auth/whoami"))
+    assert_response_ok(client.get("/auth/whoami"))
 
     # test login by username
-    assert_response_ok(client.post("/api/auth/logout"))
+    assert_response_ok(client.post("/auth/logout"))
     assert_response_ok(
         client.post(
-            "/api/auth/login",
+            "/auth/login",
             json={
                 "identity": username,
                 "password": password,
             },
         )
     )
-    assert_response_ok(client.get("/api/auth/whoami"))
+    assert_response_ok(client.get("/auth/whoami"))
 
     # test refresh access token
-    assert_response_ok(client.post("/api/auth/refresh"))
-    assert_response_ok(client.get("/api/auth/whoami"))
+    assert_response_ok(client.post("/auth/refresh"))
+    assert_response_ok(client.get("/auth/whoami"))
 
     # test forgot & reset password
-    assert_response_ok(client.post("/api/auth/logout"))
-    assert_response_ok(
-        client.post("/api/auth/forgot_password", json={"identity": email})
-    )
+    assert_response_ok(client.post("/auth/logout"))
+    assert_response_ok(client.post("/auth/forgot_password", json={"identity": email}))
     assert_response_ok(
         client.post(
-            "/api/auth/reset_password",
+            "/auth/reset_password",
             json={
                 "identity": email,
                 "otp_code": "otp_code",
@@ -119,7 +117,7 @@ def test_registration_flow_success(client, email, username, password, mock_otp):
     )
     assert_response_ok(
         client.post(
-            "/api/auth/login",
+            "/auth/login",
             json={
                 "identity": username,
                 "password": "new_password123",

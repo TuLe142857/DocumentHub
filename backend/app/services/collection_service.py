@@ -1,11 +1,12 @@
 from typing import Annotated, Sequence
 
 from fastapi import Depends
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode
 from app.crud.collection import CRUDCollection, CRUDCollectionDep
+from app.crud.document import CRUDDocument, CRUDDocumentDep
 from app.dependencies import DBSessionDep
 from app.models import *
 
@@ -16,20 +17,20 @@ class CollectionService:
     def __init__(
         self,
         crud_collection: CRUDCollection,
+        crud_doc: CRUDDocument,
         access_control: AccessControlService,
         db_session: Session,
     ):
         self.crud_collection = crud_collection
+        self.crud_doc = crud_doc
         self.access_control = access_control
         self.db_session = db_session
 
-    def list_collection(self, owner_id: int) -> Sequence[Collection]:
-        return (
-            self.db_session.execute(
-                select(Collection).where(Collection.owner_id == owner_id)
-            )
-            .scalars()
-            .all()
+    def list_collection(
+        self, owner_id: int, page: int = 1, limit: int = 10
+    ) -> tuple[Sequence[Collection], int]:
+        return self.crud_collection.get_multi(
+            Collection.owner_id == owner_id, skip=(page - 1) * limit, limit=limit
         )
 
     def create_collection(self, owner_id: int, name: str):
@@ -39,7 +40,13 @@ class CollectionService:
             )
         self.crud_collection.create(Collection(owner_id=owner_id, name=name))
 
-    def list_document(self, user_id: int, collection_id: int) -> list[Document]:
+    def list_document(
+        self,
+        user_id: int,
+        collection_id: int,
+        page: int = 1,
+        limit: int = 10,
+    ) -> tuple[Sequence[Document], int]:
         collection = self.crud_collection.get(
             collection_id,
             on_not_found=AppException(
@@ -51,7 +58,27 @@ class CollectionService:
         if err is not None:
             raise err
 
-        return [i.document for i in collection.items]
+        stmt = (
+            select(Document)
+            .join(CollectionItem)
+            .where(CollectionItem.collection_id == collection_id)
+        )
+
+        count = (
+            self.db_session.execute(
+                select(func.count()).select_from(stmt.subquery())
+            ).scalar()
+            or 0
+        )
+        if count == 0:
+            return [], count
+
+        res = (
+            self.db_session.execute(stmt.offset((page - 1) * limit).limit(limit))
+            .scalars()
+            .all()
+        )
+        return res, count
 
     def rename_collection(self, user_id: int, collection_id: int, new_name: str):
         collection = self.crud_collection.get(
@@ -116,10 +143,11 @@ class CollectionService:
 
 def get_collection_service(
     crud_collection: CRUDCollectionDep,
+    crud_doc: CRUDDocumentDep,
     access_control: AccessControlServiceDep,
     db_session: DBSessionDep,
 ) -> CollectionService:
-    return CollectionService(crud_collection, access_control, db_session)
+    return CollectionService(crud_collection, crud_doc, access_control, db_session)
 
 
 CollectionServiceDep = Annotated[CollectionService, Depends(get_collection_service)]

@@ -24,6 +24,8 @@ def parse_cors(v: Any) -> list[str] | str:
 class Settings(BaseSettings):
     ENVIRONMENT: Literal["dev", "prod"] = "dev"
 
+    API_V1_STR: str = "/api/v1"
+
     BACKEND_CORS_ORIGINS: Annotated[
         list[str], Field(), BeforeValidator(parse_cors)
     ] = []
@@ -38,10 +40,10 @@ class Settings(BaseSettings):
     JWT_REFRESH_TOKEN_EXPIRES: int = 7 * 24 * 60 * 60
 
     JWT_ACCESS_COOKIE_NAME: str = "access_token"
-    JWT_ACCESS_COOKIE_PATH: str = "/api"
+    JWT_ACCESS_COOKIE_PATH: str = f"{API_V1_STR}"
 
     JWT_REFRESH_COOKIE_NAME: str = "refresh_token"
-    JWT_REFRESH_COOKIE_PATH: str = "/api/auth/refresh"
+    JWT_REFRESH_COOKIE_PATH: str = f"{API_V1_STR}/auth/refresh"
 
     JWT_COOKIE_SECURE: bool = False
     JWT_COOKIE_SAMESITE: Literal["lax", "strict"] = "lax"
