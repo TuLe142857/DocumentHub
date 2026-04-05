@@ -30,7 +30,7 @@ class CRUDDocument(CRUDBase[Document, BaseModel, BaseModel]):
             )
             if not tag_obj in document.tags:
                 document.tags.append(tag_obj)
-        return self.__save(document, auto_commit=auto_commit, auto_flush=auto_flush)
+        return self._save(document, auto_commit=auto_commit, auto_flush=auto_flush)
 
     def remove_tags(
         self,
@@ -44,7 +44,7 @@ class CRUDDocument(CRUDBase[Document, BaseModel, BaseModel]):
         tag_names_to_remove = {t if isinstance(t, str) else t.name for t in tags}
         document.tags = [t for t in document.tags if t.name not in tag_names_to_remove]
 
-        return self.__save(document, auto_commit=auto_commit, auto_flush=auto_flush)
+        return self._save(document, auto_commit=auto_commit, auto_flush=auto_flush)
 
     def add_like(
         self,
@@ -68,7 +68,7 @@ class CRUDDocument(CRUDBase[Document, BaseModel, BaseModel]):
 
         document.liked_by.append(DocumentLike(document_id=document.id, user_id=user_id))
         document.like_count += 1
-        return self.__save(document, auto_commit=auto_commit, auto_flush=auto_flush)
+        return self._save(document, auto_commit=auto_commit, auto_flush=auto_flush)
 
     def remove_like(
         self,
@@ -90,9 +90,9 @@ class CRUDDocument(CRUDBase[Document, BaseModel, BaseModel]):
         ).scalar_one_or_none()
 
         if doc_like is not None:
-            document.liked_by.remove(doc_like)
+            self.db_session.delete(doc_like)
             document.like_count -= 1
-            return self.__save(document, auto_commit=auto_commit, auto_flush=auto_flush)
+            return self._save(document, auto_commit=auto_commit, auto_flush=auto_flush)
         else:
             return document
 
@@ -102,7 +102,7 @@ class CRUDDocument(CRUDBase[Document, BaseModel, BaseModel]):
         document.banned_at = datetime.datetime.now(datetime.timezone.utc)
         document.status = DocumentStatus.BANNED
 
-        return self.__save(document, auto_commit=auto_commit, auto_flush=auto_flush)
+        return self._save(document, auto_commit=auto_commit, auto_flush=auto_flush)
 
     def soft_delete(
         self, document: Document, *, auto_commit: bool = False, auto_flush: bool = True
@@ -110,7 +110,7 @@ class CRUDDocument(CRUDBase[Document, BaseModel, BaseModel]):
         document.deleted_at = datetime.datetime.now(datetime.timezone.utc)
         document.status = DocumentStatus.DELETED
 
-        return self.__save(document, auto_commit=auto_commit, auto_flush=auto_flush)
+        return self._save(document, auto_commit=auto_commit, auto_flush=auto_flush)
 
     def get_trash_list(self, user_id: int) -> list[Document]:
         pass

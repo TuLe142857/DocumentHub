@@ -16,7 +16,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self.db_session = db_session
         self.model: Type[ModelType] = model
 
-    def __save(
+    def _save(
         self,
         db_obj: ModelType,
         auto_flush: bool = True,
@@ -107,7 +107,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         else:
             db_obj = self.model(**obj.model_dump())
 
-        return self.__save(db_obj, auto_flush=auto_flush, auto_commit=auto_commit)
+        return self._save(db_obj, auto_flush=auto_flush, auto_commit=auto_commit)
 
     def update(
         self,
@@ -126,7 +126,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         for key, value in update_data.items():
             setattr(db_obj, key, value)
 
-        return self.__save(db_obj, auto_flush=auto_flush, auto_commit=auto_commit)
+        return self._save(db_obj, auto_flush=auto_flush, auto_commit=auto_commit)
 
     def delete(
         self, obj: ModelType, *, auto_commit: bool = False, auto_flush: bool = True

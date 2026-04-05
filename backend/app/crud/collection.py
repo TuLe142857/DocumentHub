@@ -31,7 +31,7 @@ class CRUDCollection(CRUDBase[Collection, BaseModel, BaseModel]):
         auto_flush: bool = True,
     ) -> Collection:
         collection.items.append(CollectionItem(document_id=document_id))
-        return self.__save(collection, auto_commit=auto_commit, auto_flush=auto_flush)
+        return self._save(collection, auto_commit=auto_commit, auto_flush=auto_flush)
 
     def remove_document(
         self,
@@ -42,7 +42,7 @@ class CRUDCollection(CRUDBase[Collection, BaseModel, BaseModel]):
         auto_flush: bool = True,
     ) -> Collection:
         collection.items = [_ for _ in collection.items if _.document_id != document_id]
-        return self.__save(collection, auto_commit=auto_commit, auto_flush=auto_flush)
+        return self._save(collection, auto_commit=auto_commit, auto_flush=auto_flush)
 
 
 def get_crud_collection(db_session: DBSessionDep) -> CRUDCollection:

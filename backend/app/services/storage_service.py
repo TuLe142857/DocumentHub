@@ -44,11 +44,11 @@ class StorageService:
 
     def generate_presigned_url_for_document(
         self, document: Document
-    ) -> tuple[str, str, str]:
+    ) -> tuple[str, str]:
         """
         Args:
             document: Document to generate presigned url
-        Returns: tuple[thumbnail_url, preview_url, original_url]
+        Returns: tuple[thumbnail_url, preview_url]
         """
         settings = get_settings()
         bucket = settings.S3_DOCUMENTS_BUCKET
@@ -62,12 +62,39 @@ class StorageService:
             response_content_type="Application/pdf",
             base_url=base_url,
         )
+        # original_url = self.generate_s3_presigned_url(
+        #     bucket,
+        #     document.file_object_key,
+        #     base_url=base_url,
+        # )
+        return thumbnail_url, preview_url
+
+    def generate_download_url_for_document(self, document: Document) -> tuple[str, str]:
+        """
+
+        Returns: tuple(original_url, pdf_url)
+
+        """
+        settings = get_settings()
+        bucket = settings.S3_DOCUMENTS_BUCKET
+        base_url = settings.S3_PUBLIC_URL_OVERRIDE
+
         original_url = self.generate_s3_presigned_url(
-            bucket,
-            document.file_object_key,
+            bucket=bucket,
+            key=document.file_object_key,
             base_url=base_url,
+            extra_params={"ResponseContentDisposition": f"attachment; filename={document.title.replace(' ', '')}{document.file_type}"},
         )
-        return thumbnail_url, preview_url, original_url
+
+        pdf_url = self.generate_s3_presigned_url(
+            bucket=bucket,
+            key=document.file_preview_object_key,
+            base_url=base_url,
+            response_content_type="Application/pdf",
+            extra_params={"ResponseContentDisposition": f"attachment; filename={document.title.replace(' ', '')}.pdf"},
+        )
+
+        return original_url, pdf_url
 
 
 def get_storage_service(s3_client: S3Dep) -> StorageService:

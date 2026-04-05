@@ -5,10 +5,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core import (
+    get_logger,
     get_settings,
     register_exception_handlers,
     setup_logging,
-    get_logger
 )
 from app.dependencies import get_db_engine, get_gotenberg, get_redis, get_s3
 from app.models import *
@@ -23,6 +23,7 @@ def create_s3_bucket(bucket_name: str):
         get_s3().create_bucket(Bucket=bucket_name)
     except ClientError:
         pass
+
 
 def clear_settings_cache():
     get_settings.cache_clear()
@@ -53,7 +54,6 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app_instance = FastAPI(lifespan=custom_lifespan)
-
 
     app_instance.add_middleware(
         CORSMiddleware,
