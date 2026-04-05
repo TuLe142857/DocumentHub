@@ -67,6 +67,11 @@ class LoginRequest(BaseModel):
     password: Annotated[str, Field()]
 
 
+class LoginResponse(BaseModel):
+    access_token: Annotated[str, Field()]
+    refresh_token: Annotated[str, Field()]
+
+
 class ForgotPasswordRequest(BaseModel):
     """
     /api/auth/forgot_password

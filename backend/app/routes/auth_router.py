@@ -72,11 +72,20 @@ def complete_registration(
     )
 
 
-@router.post("/login", response_model=ResponseSuccessSchema)
+@router.post(
+    "/login",
+    response_model=ResponseSuccessSchema[LoginResponse],
+    summary="Login",
+    description="Write JWT token to cookie(for web client) and return token in response data(for mobile client)",
+)
 def login(body: LoginRequest, auth_service: AuthServiceDep):
     access_token, refresh_token = auth_service.login(**body.model_dump())
+    response_data = LoginResponse(
+        access_token=access_token, refresh_token=refresh_token
+    )
+
     return (
-        APIResponse.ok()
+        APIResponse.ok(data=response_data)
         .set_access_cookie(access_token)
         .set_refresh_cookie(refresh_token)
     )
@@ -89,12 +98,13 @@ def logout():
 
 @router.post(
     "/refresh",
-    response_model=ResponseSuccessSchema,
+    response_model=ResponseSuccessSchema[str],
     summary="Refresh Access Token",
+    description="Write access token to cookie(for web client) and return access token in response data(for mobile client)",
 )
 def refresh_access_token(refresh_token: RefreshToken, auth_service: AuthServiceDep):
     access_token = auth_service.refresh_access_token(int(refresh_token.sub))
-    return APIResponse.ok().set_access_cookie(access_token)
+    return APIResponse.ok(data=access_token).set_access_cookie(access_token)
 
 
 @router.post(

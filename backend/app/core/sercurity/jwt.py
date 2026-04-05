@@ -2,8 +2,8 @@ from dataclasses import dataclass
 import datetime
 from typing import Annotated, Any, Literal
 
-from fastapi import Depends, Request
-from fastapi.params import Cookie
+from fastapi import Body, Cookie, Depends, Header
+from fastapi.security import APIKeyCookie, APIKeyHeader
 import jwt
 
 from app.core import AppException, ErrorCode, get_settings
@@ -17,7 +17,7 @@ class JWTPayload:
     exp: int
     claim: dict[str, Any]
 
-    def __dict__(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         data = {k: v for k, v in self.claim.items()}
         data["sub"] = self.sub
         data["type"] = self.token_type
@@ -140,17 +140,18 @@ def get_jwt_service() -> JWTService:
 JWTServiceDep = Annotated[JWTService, Depends(get_jwt_service)]
 
 AccessCookieDep = Annotated[
-    str | None, Cookie(alias=get_settings().JWT_ACCESS_COOKIE_NAME)
+    str | None,
+    Depends(APIKeyCookie(name=get_settings().JWT_ACCESS_COOKIE_NAME, auto_error=False)),
 ]
-RefreshCookieDep = Annotated[
-    str | None, Cookie(alias=get_settings().JWT_REFRESH_COOKIE_NAME)
+AccessHeaderDep = Annotated[
+    str | None, Depends(APIKeyHeader(name="Authorization", auto_error=False))
 ]
 
 
 class AccessPayloadProvider:
     """
     A callable class for fastapi dependencies.
-    Use to decode, validate and provide JWT access token stored on cookie.
+    Use to decode, validate and provide JWT access token stored on cookie or header.
     """
 
     def __init__(self, optional: bool = False, fresh: bool = False):
@@ -158,38 +159,73 @@ class AccessPayloadProvider:
         self.fresh = fresh
 
     def __call__(
-        self, jwt_service: JWTServiceDep, access_cookie: AccessCookieDep = None
+        self,
+        jwt_service: JWTServiceDep,
+        access_cookie: AccessCookieDep = None,
+        access_header: AccessHeaderDep = None,
     ) -> JWTPayload | None:
-        if access_cookie is None:
+        if access_header is not None:
+            if not access_header.startswith("Bearer"):
+                raise AppException(
+                    ErrorCode.INVALID_JWT_TOKEN,
+                    "Invalid JWT token format on header. Token provided by header must start with 'Bearer'",
+                )
+            parts = access_header.split()
+            if len(parts) == 2:
+                access_token = parts[1]
+            else:
+                raise AppException(
+                    ErrorCode.INVALID_JWT_TOKEN, "Invalid Token format on header."
+                )
+
+        else:
+            access_token = access_cookie
+
+        if access_token is None:
             if self.optional:
                 return None
             else:
-                raise AppException(ErrorCode.UNAUTHORIZED, "Require JWT Access Cookie")
+                raise AppException(ErrorCode.UNAUTHORIZED, "Require JWT Access Token")
         else:
             return jwt_service.validate_access_token(
-                access_token=access_cookie, require_fresh=self.fresh
+                access_token=access_token, require_fresh=self.fresh
             )
+
+
+RefreshCookieDep = Annotated[
+    str | None,
+    Depends(
+        APIKeyCookie(name=get_settings().JWT_REFRESH_COOKIE_NAME, auto_error=False)
+    ),
+]
+RefreshBodyDep = Annotated[str | None, Body(alias="refresh_token", embed=True)]
 
 
 class RefreshPayloadProvider:
     """
     A callable class for fastapi dependencies.
-    Use to decode, validate and provide JWT refresh token stored on cookie.
+    Use to decode, validate and provide JWT refresh token stored on cookie or header.
     """
 
     def __init__(self, optional: bool = False):
         self.optional = optional
 
     def __call__(
-        self, jwt_service: JWTServiceDep, refresh_cookie: RefreshCookieDep = None
+        self,
+        jwt_service: JWTServiceDep,
+        refresh_cookie: RefreshCookieDep = None,
+        refresh_body: RefreshBodyDep = None,
     ) -> JWTPayload | None:
-        if refresh_cookie is None:
+
+        refresh_token = refresh_body if (refresh_body is not None) else refresh_cookie
+
+        if refresh_token is None:
             if self.optional:
                 return None
             else:
-                raise AppException(ErrorCode.UNAUTHORIZED, "Require JWT refresh Cookie")
+                raise AppException(ErrorCode.UNAUTHORIZED, "Require JWT refresh token")
         else:
-            return jwt_service.validate_refresh_token(refresh_cookie)
+            return jwt_service.validate_refresh_token(refresh_token)
 
 
 AccessToken = Annotated[JWTPayload, Depends(AccessPayloadProvider())]
