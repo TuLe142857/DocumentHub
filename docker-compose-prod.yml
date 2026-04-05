@@ -24,7 +24,7 @@ services:
       context: ./frontend
       target: prod
       args:
-        VITE_API_BASE_URL: https://${BACKEND_DOMAIN:?Variable is not set or empty}/api
+        VITE_API_BASE_URL: https://${BACKEND_DOMAIN:?Variable is not set or empty}/api/v1
 
   backend:
     build:

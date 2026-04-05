@@ -5,6 +5,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core import get_settings
 from app.dependencies import get_db_engine
 from app.main import celery_worker, clear_settings_cache, create_app
 from app.models import *
@@ -69,5 +70,10 @@ def db_session():
 
 @pytest.fixture(scope="function")
 def client(app, db_session):
+    """
+    Provides a TestClient instance with API prefix automatically applied to all requests.
+    """
+    settings = get_settings()
     with TestClient(app) as client:
+        client.base_url = f"{client.base_url}".rstrip("/") + settings.API_V1_STR
         yield client
