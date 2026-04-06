@@ -1,24 +1,17 @@
 from app.models import *
-from app.schemas import collection_schema
 from tests.utils.api_assertions import assert_response_error, assert_response_ok
-from tests.utils.db_fixture import (
-    auth_client,
-    category,
-    collection,
-    document,
-    role_admin,
-    role_user,
-    user,
-)
+from tests.utils.database import auth_client, seeded_db
 
 
 def test_create_collection_success(auth_client):
     assert_response_ok(
-        auth_client.post("/collections", json={"name": "test collection"})
+        auth_client.post("/collections", json={"name": "Test Create Collection"}),
     )
 
 
-def test_update_collection_success(auth_client, collection):
+def test_update_collection_success(auth_client, seeded_db):
+    collection = seeded_db.collection
+
     assert_response_ok(
         auth_client.patch(
             f"/collections/{collection.id}", json={"new_name": "new name"}
@@ -26,22 +19,27 @@ def test_update_collection_success(auth_client, collection):
     )
 
 
-def test_delete_collection_success(auth_client, collection):
+def test_delete_collection_success(auth_client, seeded_db):
+    collection = seeded_db.collection
     assert_response_ok(auth_client.delete(f"/collections/{collection.id}"))
 
 
-def test_list_collections_success(auth_client, collection):
+def test_list_collections_success(auth_client):
     assert_response_ok(auth_client.get("/collections"))
 
 
-def test_list_document_in_collection_success(auth_client, collection):
+def test_list_document_in_collection_success(auth_client, seeded_db):
+    collection = seeded_db.collection
     assert_response_ok(auth_client.get(f"/collections/{collection.id}/items"))
 
 
-def test_add_document_to_collection_success(
-    auth_client, collection, user, db_session, category
-):
-    new_document = document = Document(
+def test_add_document_to_collection_success(auth_client, seeded_db):
+    category = seeded_db.categories[0]
+    user = seeded_db.user
+    db_session = seeded_db.db_session
+    collection = seeded_db.collection
+
+    new_document = Document(
         title="Test Document Title kjahdkjahsdk",
         desc="Test Document Description",
         category=category,
@@ -63,7 +61,9 @@ def test_add_document_to_collection_success(
     )
 
 
-def test_delete_document_from_collection_success(auth_client, collection, document):
+def test_remove_document_from_collection_success(auth_client, seeded_db):
+    collection = seeded_db.collection
+    document = seeded_db.public_document
     assert_response_ok(
         auth_client.delete(f"/collections/{collection.id}/items/{document.id}")
     )
