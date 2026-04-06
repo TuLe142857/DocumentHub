@@ -398,6 +398,10 @@ class DocumentService:
         self.db_session.add(moderation_log)
 
     def create_category(self, name: str):
+        """
+        Raises:
+            AppException(ErrorCode.RESOURCE_ALREADY_EXISTS)
+        """
         if (
             self.db_session.execute(
                 select(Category).where(Category.name == name)
@@ -411,6 +415,13 @@ class DocumentService:
         self.db_session.add(category)
 
     def rename_category(self, category_id: int, new_name: str):
+        """
+
+        Raises:
+            AppException(ErrorCode.RESOURCE_NOT_FOUND)
+            AppException(ErrorCode.RESOURCE_ALREADY_EXISTS)
+
+        """
         category = self.db_session.execute(
             select(Category).where(Category.id == category_id)
         ).scalar_one_or_none()
@@ -429,18 +440,26 @@ class DocumentService:
         self.db_session.add(category)
 
     def delete_category(self, category_id: int):
+        """
+        Raises:
+            AppException(ErrorCode.RESOURCE_NOT_FOUND)
+            AppException(ErrorCode.RESOURCE_IN_USE)
+        """
+        category = self.db_session.execute(
+            select(Category).where(Category.id == category_id)
+        ).scalar_one_or_none()
+
+        if category is None:
+            raise AppException(ErrorCode.RESOURCE_NOT_FOUND, "Category does not exist")
+
         is_used = self.db_session.execute(
             select(Document).where(Document.category_id == category_id)
         ).scalar_one_or_none()
 
         if is_used:
             raise AppException(ErrorCode.RESOURCE_IN_USE, "Category is in use")
-        category = self.db_session.execute(
-            select(Category).where(Category.id == category_id)
-        ).scalar_one_or_none()
-        if category is None:
-            raise AppException(ErrorCode.RESOURCE_NOT_FOUND, "Category does not exist")
-        self.db_session.delete()
+
+        self.db_session.delete(category)
 
 
 def get_document_service(
