@@ -141,10 +141,21 @@ JWTServiceDep = Annotated[JWTService, Depends(get_jwt_service)]
 
 AccessCookieDep = Annotated[
     str | None,
-    Depends(APIKeyCookie(name=get_settings().JWT_ACCESS_COOKIE_NAME, auto_error=False, scheme_name="AccessTokenCookie")),
+    Depends(
+        APIKeyCookie(
+            name=get_settings().JWT_ACCESS_COOKIE_NAME,
+            auto_error=False,
+            scheme_name="AccessTokenCookie",
+        )
+    ),
 ]
 AccessHeaderDep = Annotated[
-    str | None, Depends(APIKeyHeader(name="Authorization", auto_error=False, scheme_name="AccessTokenHeader"))
+    str | None,
+    Depends(
+        APIKeyHeader(
+            name="Authorization", auto_error=False, scheme_name="AccessTokenHeader"
+        )
+    ),
 ]
 
 
@@ -195,7 +206,11 @@ class AccessPayloadProvider:
 RefreshCookieDep = Annotated[
     str | None,
     Depends(
-        APIKeyCookie(name=get_settings().JWT_REFRESH_COOKIE_NAME, auto_error=False, scheme_name="RefreshTokenCookie")
+        APIKeyCookie(
+            name=get_settings().JWT_REFRESH_COOKIE_NAME,
+            auto_error=False,
+            scheme_name="RefreshTokenCookie",
+        )
     ),
 ]
 RefreshBodyDep = Annotated[str | None, Body(alias="refresh_token", embed=True)]
