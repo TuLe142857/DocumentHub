@@ -159,3 +159,15 @@ def auth_client(client, seeded_db):
 
     # auth cookie will auto write to this TestClient object when login success
     return client
+
+
+@pytest.fixture(scope="function")
+def admin_client(client, seeded_db):
+    login_data = {
+        "identity": seeded_db.admin.username,
+        "password": seeded_db.default_password,
+    }
+
+    response = client.post("/auth/login", json=login_data)
+    assert response.status_code == 200
+    return client

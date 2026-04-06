@@ -36,6 +36,7 @@ class SearchService:
         stmt = select(Document).where(
             Document.visibility == DocumentVisibility.PUBLIC,
             Document.status == DocumentStatus.READY,
+            Document.title.like(f"%{keywords}%"),
         )
 
         if category_id:

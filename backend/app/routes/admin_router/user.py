@@ -46,7 +46,7 @@ def get_user_list(
 @router.post("/{user_id}/ban", response_model=ResponseSuccessSchema)
 def ban(
     user_id: int,
-    reason: Annotated[str, Body()],
+    reason: Annotated[str, Body(embed=True)],
     access_token: AccessToken,
     auth_service: AuthServiceDep,
     user_service: UserServiceDep,

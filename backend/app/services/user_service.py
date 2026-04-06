@@ -129,7 +129,7 @@ class UserService:
             user_id,
             on_not_found=AppException(ErrorCode.INVALID_CREDENTIALS, "User not found"),
         )
-        user.is_active = False
+        user.is_active = True
         # send email ....
 
 
