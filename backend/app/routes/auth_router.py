@@ -1,7 +1,14 @@
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
 
 from app.core import APIResponse, ErrorCode, ResponseSuccessSchema
-from app.core.sercurity import RefreshToken
+from app.core.sercurity import (
+    AccessPayloadProvider,
+    JWTPayload,
+    RefreshPayloadProvider,
+    RefreshToken,
+)
 from app.schemas.auth_schema import *
 from app.services.auth_service import (
     AuthServiceDep,
@@ -81,8 +88,36 @@ def login(body: LoginRequest, auth_service: AuthServiceDep):
 
 
 @router.post("/logout", response_model=ResponseSuccessSchema)
-def logout():
-    return APIResponse.ok().delete_access_cookie().delete_refresh_cookie()
+def logout(
+    access_payload: Annotated[
+        JWTPayload | None,
+        Depends(AccessPayloadProvider(optional=True, on_expired_action="set_none")),
+    ],
+    refresh_payload: Annotated[
+        JWTPayload | None,
+        Depends(RefreshPayloadProvider(optional=True, on_expired_action="set_none")),
+    ],
+    auth_service: AuthServiceDep,
+):
+    """
+    Logout and revoke(add to jwt black list) access_token, refresh_token (if provided).
+    Delete access/refresh token stored on cookie.
+        - Access token(optional) can be provided via Header or Cookie
+        - Refresh token(optional) can be provided via Body or Cookie
+
+    """
+    debug = {}
+    if access_payload is not None:
+        auth_service.revoke_token(access_payload)
+        debug["access_revoked"] = True
+    if refresh_payload is not None:
+        auth_service.revoke_token(refresh_payload)
+        debug["refresh_revoked"] = True
+    return (
+        APIResponse.ok(message=str(debug))
+        .delete_access_cookie()
+        .delete_refresh_cookie()
+    )
 
 
 @router.post(
@@ -92,7 +127,7 @@ def logout():
     description="Write access token to cookie(for web client) and return access token in response data(for mobile client)",
 )
 def refresh_access_token(refresh_token: RefreshToken, auth_service: AuthServiceDep):
-    access_token = auth_service.refresh_access_token(int(refresh_token.sub))
+    access_token = auth_service.refresh_access_token(refresh_token)
     return APIResponse.ok(data=access_token).set_access_cookie(access_token)
 
 

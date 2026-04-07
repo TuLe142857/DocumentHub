@@ -1,8 +1,8 @@
+import datetime
 from typing import Annotated, Literal, Sequence
 
 from fastapi import Depends
 from redis import Redis
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode
@@ -47,10 +47,46 @@ class AuthService:
             sub=str(user.id), claim=additional_claim
         )[0]
 
+    def revoke_token(self, payload: JWTPayload):
+        """
+        Revoke JWT token. Use for logout(when token is not expired)
+        Args:
+            payload: JWT payload
+        """
+        revoke_key = f"jwt_blacklist_{payload.jti}"
+        utc_now = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+        token_life_time_seconds = payload.exp - utc_now
+
+        if token_life_time_seconds < 0:
+            # if token was expired, do nothing
+            return
+
+        # add token to backlist by redis
+        self.redis_client.set(revoke_key, payload.jti, ex=token_life_time_seconds)
+
+    def verify_token(self, payload: JWTPayload):
+        """
+        Check if JWT token was revoked or not.
+        This method won't validate JWT token, JWT token must be validated by JWTService(by using custom dependencies)
+        Args:
+            payload:
+        Raises:
+            AppException: with the following error codes:
+
+                - ErrorCode.JWT_TOKEN_REVOKED: JWT token has been revoked
+        """
+        revoke_key = f"jwt_blacklist_{payload.jti}"
+        if self.redis_client.get(revoke_key) is not None:
+            raise AppException(
+                ErrorCode.JWT_TOKEN_REVOKED, "JWT token has been revoked"
+            )
+
     def get_user_from_jwt_payload(self, payload: JWTPayload) -> User:
         """
         Raises:
-            AppException(ErrorCode.INVALID_CREDENTIALS) when user not found
+            AppException: with the following error codes:
+
+                - ErrorCode.INVALID_CREDENTIALS: when user not found
         """
         return self.crud_user.get(
             int(payload.sub),
@@ -58,6 +94,14 @@ class AuthService:
         )
 
     def request_registration(self, email: str):
+        """
+        Frist step of registration. Generate and send OTP code to email.
+        Args:
+            email: email use to register new user account.
+
+        Returns:
+
+        """
         if self.crud_user.get_by_identity(email) is not None:
             raise AppException(
                 ErrorCode.RESOURCE_ALREADY_EXISTS, "Email already exists"
@@ -70,6 +114,19 @@ class AuthService:
         self.redis_client.set(f"verify_regis_{email}", otp_code, ex=5 * 60)
 
     def verify_registration(self, email: str, otp_code: str) -> str:
+        """
+        Second step of registration. Verify OTP(from step 1). Generate and return `registration_code`
+
+        Args:
+            email: email use to register new user account.
+            otp_code: OTP code that use received via email.
+        Returns:
+            str: `registration code` for complete registration.
+        Raises:
+            AppException: with the following error codes:
+
+                - ErrorCode.INVALID_CODE: OTP code not match
+        """
         otp_key = f"verify_regis_{email}"
         otp_in_cache = self.redis_client.get(otp_key)
         if not otp_in_cache or otp_in_cache.decode() != otp_code:
@@ -86,10 +143,23 @@ class AuthService:
         self, email: str, registration_code: str, username: str, password: str
     ) -> tuple[str, str]:
         """
-        Returns: tuple[str, str]: access_token, refresh_token
+        Complete registration.
+
+        Args:
+            email: email use to register new user account.
+            registration_code: `registration_code` from step 2.
+            username: username use to register new user account.
+            password: plain password
+        Returns:
+            tuple[str, str]: access_token, refresh_token
+        Raises:
+            AppException: with the following error codes:
+
+                - ErrorCode.INVALID_CODE: registration code not match
+                - ErrorCode.RESOURCE_ALREADY_EXISTS: username already exists
         """
 
-        # validate registration code
+        # verify registration code
         registration_key = f"registration_{email}"
         registration_code_in_cache = self.redis_client.get(registration_key)
         if (
@@ -98,33 +168,29 @@ class AuthService:
         ):
             raise AppException(ErrorCode.INVALID_CODE, "Invalid registration code")
 
-        # check email & username already exist
-        if (
-            User.get_by_identity(username, self.db_session) is not None
-            or User.get_by_identity(email, self.db_session) is not None
-        ):
+        # check username already exist
+        if self.crud_user.get_by_identity(username) is not None:
             raise AppException(
-                ErrorCode.RESOURCE_ALREADY_EXISTS, "Username or Email already exists"
+                ErrorCode.RESOURCE_ALREADY_EXISTS, "Username already exists"
             )
 
         # add new user
-        try:
-            role_user = Role.get_or_create("USER", self.db_session)
-            new_user = User(
-                email=email,
-                username=username,
-                role=role_user,
-                profile=UserProfile(),
-            )
-            new_user.set_password(password)
-            self.db_session.add(new_user)
-            self.db_session.commit()
-        except IntegrityError:
-            raise AppException(ErrorCode.DATA_INTEGRITY_ERROR)
+        role_user = Role.get_or_create("USER", self.db_session)
+        new_user = User(
+            email=email,
+            username=username,
+            role=role_user,
+            profile=UserProfile(),  # start with empty profile, user can edit latter
+        )
+        new_user.set_password(password)
+        self.db_session.add(new_user)
+        # flush to get id session will be commited by dependencies "DBSessionDep"
+        self.db_session.flush()
 
-        # create user success, delete registration code
+        # delete registration code
         self.redis_client.delete(registration_key)
 
+        # send email when success
         self.mail_service.send_registration_complete_email(to=new_user.email)
 
         # return access/refresh token
@@ -135,28 +201,73 @@ class AuthService:
 
     def login(self, identity: str, password: str) -> tuple[str, str]:
         """
+        Check login and return [access_token, refresh_token]]
+        Parameters:
+            identity: username or email
+            password: plain password
+        Returns:
+            tuple[str, str]: access_token, refresh_token
+        Raises:
+            AppException: with the following ErrorCode:
 
-        Returns: tuple[str, str]: access_token, refresh_token
-
+                - ErrorCode.LOGIN_FAILED: identity not exist or password not matched
+                - ErrorCode.USER_INACTIVE: user is not active(user was banned)
         """
         user = self.crud_user.get_by_identity(identity)
+
+        # check login
         if not user or not user.verify_password(password):
             raise AppException(
-                ErrorCode.LOGIN_FAILED, "identity or password is invalid"
+                ErrorCode.LOGIN_FAILED, "Identity or Password is invalid"
             )
+
+        # check user is active
+        if not user.is_active:
+            raise AppException(ErrorCode.USER_INACTIVE, "User is inactive")
 
         return (
             self.__generate_access_token(user, fresh=True),
             self.__generate_refresh_token(user),
         )
 
-    def refresh_access_token(self, user_id: int) -> str:
-        user = self.crud_user.get(user_id)
-        if not user:
-            raise AppException(ErrorCode.INVALID_CREDENTIALS, "User ID not found")
+    def refresh_access_token(self, refresh_payload: JWTPayload) -> str:
+        """
+        Validate refresh token and generate access token(fresh=False).
+        Args:
+            refresh_payload: JWPayload for refresh token
+        Returns:
+            str: access_token
+
+        Raises:
+            AppException: with the following ErrorCode:
+
+                - ErrorCode.JWT_TOKEN_REVOKED: refresh token is revoked
+                - ErrorCode.USER_INACTIVE: user is not active(user was banned)
+                - ErrorCode.INVALID_CREDENTIALS: user not found
+        """
+
+        # verify refresh token
+        self.verify_token(refresh_payload)
+
+        user = self.crud_user.get(
+            int(refresh_payload.sub),
+            on_not_found=AppException(
+                ErrorCode.INVALID_CREDENTIALS, "User ID not found"
+            ),
+        )
+
+        # verify user is active
+        if not user.is_active:
+            raise AppException(ErrorCode.USER_INACTIVE, "User is inactive")
+
         return self.__generate_access_token(user, fresh=False)
 
     def forgot_password(self, identity: str):
+        """
+        Generate OTP incase user forgot password and want to reset.OTP will be sent to user email.
+        Args:
+            identity: email or username
+        """
         user = self.crud_user.get_by_identity(identity)
         if not user:
             raise AppException(ErrorCode.INVALID_CREDENTIALS, "User not found")
@@ -169,6 +280,13 @@ class AuthService:
         )
 
     def reset_password(self, identity: str, otp_code: str, new_password: str):
+        """
+        Next step of `forgot_password`.
+        Args:
+            identity: email or username
+            otp_code: OTP code that user received via email.
+            new_password: new password
+        """
         user = self.crud_user.get_by_identity(identity)
         if not user:
             raise AppException(ErrorCode.INVALID_CREDENTIALS, "User not found")
@@ -202,7 +320,9 @@ class CurrentUserProvider:
     def __init__(self, role: str | Sequence[str] | None = None, optional: bool = False):
         """
         FastAPI dependency that provides the current authenticated user.
+
         - Validates access token and returns the corresponding active user.
+        - Check if Access Token is revoke or not.
         - Optionally enforces role-based access control.
         Args:
             role:
@@ -211,6 +331,8 @@ class CurrentUserProvider:
             optional:
                 If False (default), raises an exception when the user is not authenticated.
                 If True, returns None instead of raising when no user is logged in.
+        Raises:
+            ValueError: wrong type of init parameter `role`
         """
         if role is None:
             self.accept_roles = None
@@ -231,11 +353,15 @@ class CurrentUserProvider:
         ],
         auth_service: AuthServiceDep,
     ) -> User | None:
-        user = (
-            auth_service.get_user_from_jwt_payload(access_payload)
-            if (access_payload is not None)
-            else None
-        )
+
+        # verify token(raise AppException when token revoked)
+
+        if access_payload is None:
+            user = None
+        else:
+            auth_service.verify_token(access_payload)
+            user = auth_service.get_user_from_jwt_payload(access_payload)
+
         if user is None:
             if self.optional:
                 return None
@@ -247,8 +373,8 @@ class CurrentUserProvider:
                 raise AppException(ErrorCode.USER_INACTIVE, "User inactive")
 
             # check role
-            if (self.accept_roles is not None) and not (
-                user.role.name in self.accept_roles
+            if (self.accept_roles is not None) and (
+                user.role.name not in self.accept_roles
             ):
                 raise AppException(
                     ErrorCode.FORBIDDEN,

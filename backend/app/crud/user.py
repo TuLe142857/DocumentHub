@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from app.core import AppException
 from app.dependencies import DBSessionDep
 from app.models import User
 
@@ -15,17 +16,25 @@ class CRUDUser(CRUDBase[User, BaseModel, BaseModel]):
     def __init__(self, db_session: Session):
         super().__init__(model=User, db_session=db_session)
 
-    def get_by_identity(self, identity: str) -> User | None:
+    def get_by_identity(
+        self, identity: str, *, on_not_found: AppException | None = None
+    ) -> User | None:
         """
-        Select by username or email
+        Select User by username or email. Raise exception if not found(optional, must provide `on_not_found` as an Exception).
         Args:
             identity: email or username
-
+            on_not_found: AppException or None. If provide an AppException instance, it will be raised when user not found.
         Returns:
+            User|None: user or None
+        Raises:
+            AppException: when user does not exist and `on_not_found` is provided as AppException instance.
         """
-        return self.db_session.execute(
+        user = self.db_session.execute(
             select(User).where(or_(User.email == identity, User.username == identity))
         ).scalar_one_or_none()
+        if user is None and on_not_found is not None:
+            raise on_not_found
+        return user
 
 
 def get_crud_user(db_session: DBSessionDep) -> CRUDUser:

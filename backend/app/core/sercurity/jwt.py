@@ -185,9 +185,15 @@ class AccessPayloadProvider:
     Use to decode, validate and provide JWT access payload stored on cookie or header.
     """
 
-    def __init__(self, optional: bool = False, fresh: bool = False):
+    def __init__(
+        self,
+        optional: bool = False,
+        fresh: bool = False,
+        on_expired_action: Literal["set_none", "raise"] = "raise",
+    ):
         self.optional = optional
         self.fresh = fresh
+        self.on_expired_action = on_expired_action
 
     def __call__(
         self,
@@ -218,9 +224,20 @@ class AccessPayloadProvider:
             else:
                 raise AppException(ErrorCode.UNAUTHORIZED, "Require JWT Access Token")
         else:
-            return jwt_service.validate_access_token(
-                access_token=access_token, require_fresh=self.fresh
-            )
+            if self.on_expired_action == "raise":
+                return jwt_service.validate_access_token(
+                    access_token=access_token, require_fresh=self.fresh
+                )
+            try:
+                return jwt_service.validate_access_token(
+                    access_token=access_token, require_fresh=self.fresh
+                )
+            except AppException as exc:
+                # when on_expire_action = "set_none"
+                # if token expire return None
+                if exc.error_code == ErrorCode.JWT_TOKEN_EXPIRED:
+                    return None
+                raise exc
 
 
 RefreshCookieDep = Annotated[
@@ -242,8 +259,13 @@ class RefreshPayloadProvider:
     Use to decode, validate and provide JWT refresh payload stored on cookie or header.
     """
 
-    def __init__(self, optional: bool = False):
+    def __init__(
+        self,
+        optional: bool = False,
+        on_expired_action: Literal["set_none", "raise"] = "raise",
+    ):
         self.optional = optional
+        self.on_expired_action = on_expired_action
 
     def __call__(
         self,
@@ -260,7 +282,16 @@ class RefreshPayloadProvider:
             else:
                 raise AppException(ErrorCode.UNAUTHORIZED, "Require JWT refresh token")
         else:
-            return jwt_service.validate_refresh_token(refresh_token)
+            if self.on_expired_action == "raise":
+                return jwt_service.validate_refresh_token(refresh_token)
+            try:
+                return jwt_service.validate_refresh_token(refresh_token)
+            except AppException as exc:
+                # when on_expire_action = "set_none"
+                # if token expire return None
+                if exc.error_code == ErrorCode.JWT_TOKEN_EXPIRED:
+                    return None
+                raise exc
 
 
 AccessToken = Annotated[JWTPayload, Depends(AccessPayloadProvider())]

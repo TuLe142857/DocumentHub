@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     JWT_ACCESS_COOKIE_PATH: str = f"{API_V1_STR}"
 
     JWT_REFRESH_COOKIE_NAME: str = "refresh_token"
-    JWT_REFRESH_COOKIE_PATH: str = f"{API_V1_STR}/auth/refresh"
+    JWT_REFRESH_COOKIE_PATH: str = f"{API_V1_STR}/auth"
 
     JWT_COOKIE_SECURE: bool = False
     JWT_COOKIE_SAMESITE: Literal["lax", "strict"] = "lax"
