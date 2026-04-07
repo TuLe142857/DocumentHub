@@ -8,13 +8,13 @@ from app.core import (
     ResponsePaginationSchema,
     ResponseSuccessSchema,
 )
-from app.core.sercurity.jwt import AccessToken, OptionalAccessToken
 from app.schemas.document_schema import DocumentSummaryResponse
 from app.schemas.user_profile_schema import (
     AvatarUpdateRequest,
     UserProfileResponse,
     UserProfileUpdateRequest,
 )
+from app.services.auth_service import CurrentUserDep, OptionalCurrentUserDep
 from app.services.document_service import DocumentServiceDep
 from app.services.user_service import UserServiceDep
 
@@ -23,37 +23,34 @@ router = APIRouter(prefix="/users", tags=["UserProfile"])
 
 @router.get("/me/profile", response_model=ResponseSuccessSchema[UserProfileResponse])
 def get_self_profile(
-    access_token: AccessToken,
+    current_user: CurrentUserDep,
     user_service: UserServiceDep,
 ):
-    user_id = int(access_token.sub)
-    profile = user_service.get_profile_by_id(user_id)
+    profile = user_service.get_profile_by_id(current_user.id)
     res = UserProfileResponse.model_validate(profile)
     return APIResponse.ok(data=res)
 
 
 @router.patch("/me/profile", response_model=ResponseSuccessSchema)
 def update_self_profile(
-    access_token: AccessToken,
     body: UserProfileUpdateRequest,
+    current_user: CurrentUserDep,
     user_service: UserServiceDep,
 ):
-    user_id = int(access_token.sub)
     profile_update_dict = body.model_dump(exclude_unset=True)
-    user_service.update_profile(user_id, profile_update_dict)
+    user_service.update_profile(current_user.id, profile_update_dict)
     return APIResponse.ok(message=f"{profile_update_dict}")
 
 
 @router.put("/me/avatar", response_model=ResponseSuccessSchema)
 def update_avatar(
-    access_token: AccessToken,
     form: Annotated[AvatarUpdateRequest, Form(media_type="multipart/form-data")],
+    current_user: CurrentUserDep,
     user_service: UserServiceDep,
 ):
-    user_id = int(access_token.sub)
     avatar_file = form.avatar.file
     avatar_content_type = form.avatar.content_type
-    user_service.update_avatar(user_id, avatar_file, avatar_content_type)
+    user_service.update_avatar(current_user.id, avatar_file, avatar_content_type)
     return APIResponse.ok(data=form.avatar.filename)
 
 
@@ -76,17 +73,19 @@ def get_userprofile(
 def get_user_documents(
     username: str,
     pagination: PaginationQueryDep,
-    access_token: OptionalAccessToken,
+    current_user: OptionalCurrentUserDep,
     document_service: DocumentServiceDep,
 ):
-    if access_token is None:
+    if current_user is None:
         doc_list, total = document_service.list_public_document(
             owner=username, page=pagination.page, limit=pagination.limit
         )
     else:
-        user_id = int(access_token.sub)
         doc_list, total = document_service.get_document_list(
-            owner=username, viewer=user_id, page=pagination.page, limit=pagination.limit
+            owner=username,
+            viewer=current_user.id,
+            page=pagination.page,
+            limit=pagination.limit,
         )
 
     res_data = [DocumentSummaryResponse.model_validate(doc) for doc in doc_list]

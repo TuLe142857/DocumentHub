@@ -1,7 +1,7 @@
-from app.models import Category
-from tests.utils.api_assertions import assert_response_ok, assert_response_error
-from tests.utils.database import admin_client, seeded_db
 from app.core import ErrorCode
+from app.models import Category
+from tests.utils.api_assertions import assert_response_error, assert_response_ok
+from tests.utils.database import admin_client, seeded_db
 
 """
 =====================================================
@@ -65,28 +65,36 @@ def test_unban_user_success(admin_client, seeded_db):
 
 
 def test_add_category_success(admin_client):
-    assert_response_ok(admin_client.post("/admin/categories", json={"name": "NewCreated"}))
+    assert_response_ok(
+        admin_client.post("/admin/categories", json={"name": "NewCreated"})
+    )
 
 
 def test_add_category_failed_duplicate_name(admin_client, seeded_db):
     exists_category = seeded_db.categories[0]
     assert_response_error(
         admin_client.post("/admin/categories", json={"name": exists_category.name}),
-        expected_error=ErrorCode.RESOURCE_ALREADY_EXISTS
+        expected_error=ErrorCode.RESOURCE_ALREADY_EXISTS,
     )
 
 
 def test_rename_category_success(admin_client, seeded_db):
     category = seeded_db.categories[0]
-    assert_response_ok(admin_client.patch(f"/admin/categories/{category.id}", json={"new_name": "NewCategoryName"}))
+    assert_response_ok(
+        admin_client.patch(
+            f"/admin/categories/{category.id}", json={"new_name": "NewCategoryName"}
+        )
+    )
 
 
 def test_rename_category_failed_duplicate_name(admin_client, seeded_db):
     category_0 = seeded_db.categories[0]
     category_1 = seeded_db.categories[1]
     assert_response_error(
-        admin_client.patch(f"/admin/categories/{category_0.id}", json={"new_name": category_1.name}),
-        expected_error=ErrorCode.RESOURCE_ALREADY_EXISTS
+        admin_client.patch(
+            f"/admin/categories/{category_0.id}", json={"new_name": category_1.name}
+        ),
+        expected_error=ErrorCode.RESOURCE_ALREADY_EXISTS,
     )
 
 
@@ -99,7 +107,9 @@ def test_delete_categories_success(admin_client, seeded_db):
     assert_response_ok(admin_client.delete(f"/admin/categories/{new_category.id}"))
 
     db_session.commit()
-    category_in_db = db_session.query(Category).filter(Category.name == "NewCreated").one_or_none()
+    category_in_db = (
+        db_session.query(Category).filter(Category.name == "NewCreated").one_or_none()
+    )
     assert category_in_db is None
 
 
@@ -107,9 +117,8 @@ def test_delete_categories_failed(admin_client, seeded_db):
     category_in_use = seeded_db.public_document.category
     assert_response_error(
         admin_client.delete(f"/admin/categories/{category_in_use.id}"),
-        expected_error=ErrorCode.RESOURCE_IN_USE
+        expected_error=ErrorCode.RESOURCE_IN_USE,
     )
-
 
 
 """

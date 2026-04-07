@@ -9,9 +9,8 @@ from app.core import (
     ResponsePaginationSchema,
     ResponseSuccessSchema,
 )
-from app.core.sercurity import AccessToken
 from app.schemas.user_schema import UserSchema, UserSearchQuery
-from app.services.auth_service import AuthServiceDep
+from app.services.auth_service import AuthServiceDep, CurrentAdminDep
 from app.services.user_service import UserServiceDep
 
 router = APIRouter(prefix="/users")
@@ -19,13 +18,10 @@ router = APIRouter(prefix="/users")
 
 @router.get("", response_model=ResponsePaginationSchema[UserSchema])
 def get_user_list(
-    # access_token: AccessToken,
     query: Annotated[UserSearchQuery, Query()],
-    auth_service: AuthServiceDep,
+    admin: CurrentAdminDep,
     user_service: UserServiceDep,
 ):
-    # if not auth_service.is_admin(int(access_token.sub)):
-    #     raise AppException(ErrorCode.FORBIDDEN)
     users, total = user_service.list_user(
         filter_email=query.email,
         filter_name=query.username,
@@ -47,24 +43,18 @@ def get_user_list(
 def ban(
     user_id: int,
     reason: Annotated[str, Body(embed=True)],
-    access_token: AccessToken,
-    auth_service: AuthServiceDep,
+    admin: CurrentAdminDep,
     user_service: UserServiceDep,
 ):
-    if not auth_service.is_admin(int(access_token.sub)):
-        raise AppException(ErrorCode.FORBIDDEN)
-    user_service.ban_user(user_id, admin_id=int(access_token.sub), reason=reason)
+    user_service.ban_user(user_id, admin_id=admin.id, reason=reason)
     return APIResponse.ok()
 
 
 @router.post("/{user_id}/unban", response_model=ResponseSuccessSchema)
 def unban(
     user_id: int,
-    access_token: AccessToken,
-    auth_service: AuthServiceDep,
+    admin: CurrentAdminDep,
     user_service: UserServiceDep,
 ):
-    if not auth_service.is_admin(int(access_token.sub)):
-        raise AppException(ErrorCode.FORBIDDEN)
-    user_service.unban_user(user_id, admin_id=int(access_token.sub))
+    user_service.unban_user(user_id, admin_id=admin.id)
     return APIResponse.ok()

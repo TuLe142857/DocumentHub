@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 
+from fastapi.testclient import TestClient
 import pytest
 from sqlalchemy.orm import Session
 
+from app.core import get_settings
 from app.models import *
 
 
@@ -149,25 +151,31 @@ def seeded_db(db_session) -> SeededData:
 
 
 @pytest.fixture(scope="function")
-def auth_client(client, seeded_db):
-    login_data = {
-        "identity": seeded_db.user.username,
-        "password": seeded_db.default_password,
-    }
-    response = client.post("/auth/login", json=login_data)
-    assert response.status_code == 200
+def auth_client(app, seeded_db):
+    settings = get_settings()
+    with TestClient(app) as client:
+        client.base_url = f"{client.base_url}".rstrip("/") + settings.API_V1_STR
+        login_data = {
+            "identity": seeded_db.user.username,
+            "password": seeded_db.default_password,
+        }
+        response = client.post("/auth/login", json=login_data)
+        assert response.status_code == 200
 
-    # auth cookie will auto write to this TestClient object when login success
-    return client
+        # auth cookie will auto write to this TestClient object when login success
+        yield client
 
 
 @pytest.fixture(scope="function")
-def admin_client(client, seeded_db):
-    login_data = {
-        "identity": seeded_db.admin.username,
-        "password": seeded_db.default_password,
-    }
+def admin_client(app, seeded_db):
+    settings = get_settings()
+    with TestClient(app) as client:
+        client.base_url = f"{client.base_url}".rstrip("/") + settings.API_V1_STR
+        login_data = {
+            "identity": seeded_db.admin.username,
+            "password": seeded_db.default_password,
+        }
 
-    response = client.post("/auth/login", json=login_data)
-    assert response.status_code == 200
-    return client
+        response = client.post("/auth/login", json=login_data)
+        assert response.status_code == 200
+        yield client

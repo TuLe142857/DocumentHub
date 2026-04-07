@@ -192,7 +192,7 @@ class APIResponse(JSONResponse):
         return self.set_cookie(
             key=get_settings().JWT_ACCESS_COOKIE_NAME,
             value=access_token,
-            max_age=get_settings().JWT_ACCESS_TOKEN_EXPIRES,
+            # max_age=get_settings().JWT_ACCESS_TOKEN_EXPIRES,
             httponly=True,
             secure=get_settings().JWT_COOKIE_SECURE,
             samesite=get_settings().JWT_COOKIE_SAMESITE,

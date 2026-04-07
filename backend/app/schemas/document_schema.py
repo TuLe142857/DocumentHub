@@ -111,10 +111,10 @@ class DocumentSummaryResponse(BaseModel):
 
     id: Annotated[int, Field()]
     title: Annotated[str, Field()]
+    file_thumbnail_url: Annotated[str, Field(default="")]
+    file_type: Annotated[str, Field(description="Original file type")]
     visibility: Annotated[DocumentVisibility, Field()]
     status: Annotated[DocumentStatus, Field]
-
-    # Flatten User object to its username string
     owner: Annotated[
         str,
         Field(
@@ -122,59 +122,47 @@ class DocumentSummaryResponse(BaseModel):
             description="owner username",
         ),
     ]
-
-    file_thumbnail_url: Annotated[
-        str,
-        Field(validation_alias="thumbnail_object_key"),
-    ]
-
+    page_count: Annotated[int, Field()]
     view_count: Annotated[int, Field()]
+    like_count: Annotated[int, Field()]
     download_count: Annotated[int, Field()]
-
-    # Access category name via nested relationship path: category.name
     category: Annotated[
         str,
         Field(
             validation_alias=AliasPath("category", "name"), description="category name"
         ),
     ]
-
-    # Flatten List[Tag objects] into a List[str]
     tags: Annotated[
         list[str],
         Field(description="tag name"),
         BeforeValidator(lambda tags: [_.name for _ in tags]),
     ]
 
-    file_type: Annotated[str, Field(description="Original file type")]
-
     @staticmethod
-    def from_object(obj: Any, thumbnail_url: str) -> "DocumentSummaryResponse":
-        res = DocumentSummaryResponse.model_validate(obj)
+    def build(from_obj: Any, thumbnail_url: str) -> "DocumentSummaryResponse":
+        """ "
+        Build a DocumentSummaryResponse from object.
+        This method use pydantic BaseModel.model_validate() and override attribute file_thumbnail_url.
+        """
+        res = DocumentSummaryResponse.model_validate(from_obj)
         res.file_thumbnail_url = thumbnail_url
         return res
 
 
 class DocumentDetailsResponse(DocumentSummaryResponse):
+    file_thumbnail_url: Annotated[str, Field(default=None)]
     model_config = ConfigDict(from_attributes=True, extra="ignore")
 
+    desc: Annotated[str | None, Field()]
+    file_preview_url: Annotated[
+        str, Field(default="", description="Preview version(PDF)")
+    ]
     liked: Annotated[
         bool,
         Field(
             default=False,
             description="Whether or not the document was liked by current user",
         ),
-    ]
-    desc: Annotated[str | None, Field()]
-    #
-    # file_original_url: Annotated[
-    #     str,
-    #     Field(validation_alias="file_object_key"),
-    # ]
-
-    file_preview_url: Annotated[
-        str,
-        Field(validation_alias="file_preview_object_key"),
     ]
 
     @computed_field(description="Available formats for download document. ")
@@ -185,17 +173,18 @@ class DocumentDetailsResponse(DocumentSummaryResponse):
 
     sha256sum: Annotated[str, Field()]
     md5sum: Annotated[str, Field()]
-    page_count: Annotated[int, Field()]
-    view_count: Annotated[int, Field()]
-    like_count: Annotated[int, Field()]
-    download_count: Annotated[int, Field()]
 
     @staticmethod
-    def from_object(
-        obj: Any, thumbnail_url: str, preview_url: str
+    def build(
+        from_obj: Any, thumbnail_url: str, preview_url: str, liked: bool = False
     ) -> "DocumentDetailsResponse":
-        res = DocumentDetailsResponse.model_validate(obj)
+        """
+        Build a DocumentDetailsResponse from object.
+        This method use pydantic BaseModel.model_validate() and override attribute file_thumbnail_url,
+        file_preview_url and liked.
+        """
+        res = DocumentDetailsResponse.model_validate(from_obj)
         res.file_thumbnail_url = thumbnail_url
         res.file_preview_url = preview_url
-        # res.file_original_url = original_url
+        res.liked = liked
         return res

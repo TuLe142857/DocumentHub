@@ -1,4 +1,4 @@
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Sequence
 
 from fastapi import Depends
 from redis import Redis
@@ -6,7 +6,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode
-from app.core.sercurity import JWTPayload, JWTService, JWTServiceDep
+from app.core.sercurity import (
+    AccessPayloadProvider,
+    JWTPayload,
+    JWTService,
+    JWTServiceDep,
+)
 from app.crud.user import CRUDUser, CRUDUserDep
 from app.dependencies import DBSessionDep, RedisDep
 from app.models import *
@@ -34,63 +39,23 @@ class AuthService:
         additional_claim = None
         return self.jwt_service.generate_access_token(
             sub=str(user.id), fresh=fresh, claim=additional_claim
-        )
+        )[0]
 
     def __generate_refresh_token(self, user: User) -> str:
         additional_claim = None
         return self.jwt_service.generate_refresh_token(
             sub=str(user.id), claim=additional_claim
-        )
+        )[0]
 
-    def get_user(self, user_id: int) -> User:
+    def get_user_from_jwt_payload(self, payload: JWTPayload) -> User:
+        """
+        Raises:
+            AppException(ErrorCode.INVALID_CREDENTIALS) when user not found
+        """
         return self.crud_user.get(
-            user_id,
+            int(payload.sub),
             on_not_found=AppException(ErrorCode.INVALID_CREDENTIALS, "User not found"),
         )
-
-    def is_admin(self, user_id: int) -> bool:
-        try:
-            user = self.get_user(user_id)
-            return user.role.name == "ADMIN"
-        except AppException:
-            return False
-
-    def get_user_id(
-        self,
-        jwt_payload: JWTPayload,
-        required_active: bool = True,
-        require_role: Literal["USER", "ADMIN"] | None = None,
-    ) -> int:
-        """
-        get user id from jwt token payload
-        Args:
-            jwt_payload: access/refresh token payload
-            required_active: check user is active
-            require_role: check user role match role name
-
-
-
-        Returns: user id
-        """
-        user_id = int(jwt_payload.sub)
-
-        if (not required_active) or (require_role is None):
-            return user_id
-
-        user = self.crud_user.get(user_id)
-
-        if user is None:
-            raise AppException(ErrorCode.INVALID_CREDENTIALS, "User not found")
-
-        if required_active and not user.is_active:
-            raise AppException(ErrorCode.USER_IS_IN_ACTIVE)
-
-        if (require_role is not None) and (
-            require_role.strip().lower() != user.role.name.lower()
-        ):
-            raise AppException(ErrorCode.FORBIDDEN, "Role mismatch")
-
-        return user_id
 
     def request_registration(self, email: str):
         if self.crud_user.get_by_identity(email) is not None:
@@ -231,3 +196,69 @@ def get_auth_service(
 
 
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+
+
+class CurrentUserProvider:
+    def __init__(self, role: str | Sequence[str] | None = None, optional: bool = False):
+        """
+        FastAPI dependency that provides the current authenticated user.
+        - Validates access token and returns the corresponding active user.
+        - Optionally enforces role-based access control.
+        Args:
+            role:
+                Required role(s). Accepts a string or a sequence of strings.
+                If None (default), any authenticated user is allowed.
+            optional:
+                If False (default), raises an exception when the user is not authenticated.
+                If True, returns None instead of raising when no user is logged in.
+        """
+        if role is None:
+            self.accept_roles = None
+        elif isinstance(role, str):
+            self.accept_roles = [role]
+        elif isinstance(role, Sequence):
+            self.accept_roles = role
+        else:
+            raise ValueError(
+                f"Invalid role type. Expect 'str|Sequence[str]|None', got {type(role)}"
+            )
+        self.optional = optional
+
+    def __call__(
+        self,
+        access_payload: Annotated[
+            JWTPayload | None, Depends(AccessPayloadProvider(optional=True))
+        ],
+        auth_service: AuthServiceDep,
+    ) -> User | None:
+        user = (
+            auth_service.get_user_from_jwt_payload(access_payload)
+            if (access_payload is not None)
+            else None
+        )
+        if user is None:
+            if self.optional:
+                return None
+            else:
+                raise AppException(ErrorCode.UNAUTHORIZED, "Required login")
+        else:
+            # check active
+            if not user.is_active:
+                raise AppException(ErrorCode.USER_INACTIVE, "User inactive")
+
+            # check role
+            if (self.accept_roles is not None) and not (
+                user.role.name in self.accept_roles
+            ):
+                raise AppException(
+                    ErrorCode.FORBIDDEN,
+                    f"User role not allowed. Current use role: {user.role.name}, allowed roles: {self.accept_roles}",
+                )
+            return user
+
+
+CurrentUserDep = Annotated[User, Depends(CurrentUserProvider(role=["USER", "ADMIN"]))]
+OptionalCurrentUserDep = Annotated[
+    User | None, Depends(CurrentUserProvider(role=["USER", "ADMIN"], optional=True))
+]
+CurrentAdminDep = Annotated[User, Depends(CurrentUserProvider(role=["ADMIN"]))]

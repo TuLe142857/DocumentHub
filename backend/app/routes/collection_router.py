@@ -6,9 +6,9 @@ from app.core import (
     ResponsePaginationSchema,
     ResponseSuccessSchema,
 )
-from app.core.sercurity import AccessToken
 from app.schemas.collection_schema import *
 from app.schemas.document_schema import DocumentSummaryResponse
+from app.services.auth_service import CurrentUserDep, OptionalCurrentUserDep
 from app.services.collection_service import CollectionServiceDep
 
 router = APIRouter(prefix="/collections", tags=["Collection"])
@@ -20,12 +20,12 @@ router = APIRouter(prefix="/collections", tags=["Collection"])
     summary="Get all collections of current user",
 )
 def get_collection_list(
-    access_token: AccessToken,
+    current_user: CurrentUserDep,
     pagination: PaginationQueryDep,
     collection_service: CollectionServiceDep,
 ):
     collections, total = collection_service.list_collection(
-        owner_id=int(access_token.sub),
+        owner_id=current_user.id,
         page=pagination.page,
         limit=pagination.limit,
     )
@@ -40,11 +40,11 @@ def get_collection_list(
 
 @router.post("", response_model=ResponseSuccessSchema)
 def create_collection(
-    access_token: AccessToken,
+    current_user: CurrentUserDep,
     name: Annotated[str, Body(embed=True, alias="name")],
     collection_service: CollectionServiceDep,
 ):
-    collection_service.create_collection(owner_id=int(access_token.sub), name=name)
+    collection_service.create_collection(owner_id=current_user.id, name=name)
     return APIResponse.ok()
 
 
@@ -54,13 +54,13 @@ def create_collection(
     summary="Get documents in collection",
 )
 def get_documents_in_collection(
-    access_token: AccessToken,
+    current_user: CurrentUserDep,
     collection_id: int,
     collection_service: CollectionServiceDep,
     pagination: PaginationQueryDep,
 ):
     documents, total = collection_service.list_document(
-        user_id=int(access_token.sub),
+        user_id=current_user.id,
         collection_id=int(collection_id),
         page=pagination.page,
         limit=pagination.limit,
@@ -76,25 +76,25 @@ def get_documents_in_collection(
 
 @router.patch("/{collection_id}", response_model=ResponseSuccessSchema)
 def rename_collection(
-    access_token: AccessToken,
+    current_user: CurrentUserDep,
     collection_id: int,
     new_name: Annotated[str, Body(embed=True)],
     collection_service: CollectionServiceDep,
 ):
     collection_service.rename_collection(
-        user_id=int(access_token.sub), collection_id=collection_id, new_name=new_name
+        user_id=current_user.id, collection_id=collection_id, new_name=new_name
     )
     return APIResponse.ok()
 
 
 @router.delete("/{collection_id}", response_model=ResponseSuccessSchema)
 def delete_collection(
-    access_token: AccessToken,
+    current_user: CurrentUserDep,
     collection_id: int,
     collection_service: CollectionServiceDep,
 ):
     collection_service.delete_collection(
-        user_id=int(access_token.sub),
+        user_id=current_user.id,
         collection_id=collection_id,
     )
     return APIResponse.ok()
@@ -104,13 +104,13 @@ def delete_collection(
     "/{collection_id}/items/{document_id}", response_model=ResponseSuccessSchema
 )
 def add_document_to_collection(
-    access_token: AccessToken,
+    current_user: CurrentUserDep,
     collection_id: int,
     document_id: int,
     collection_service: CollectionServiceDep,
 ):
     collection_service.add_document_to_collection(
-        user_id=int(access_token.sub),
+        user_id=current_user.id,
         collection_id=collection_id,
         document_id=document_id,
     )
@@ -121,13 +121,13 @@ def add_document_to_collection(
     "/{collection_id}/items/{document_id}", response_model=ResponseSuccessSchema
 )
 def remove_document_from_collection(
-    access_token: AccessToken,
+    current_user: CurrentUserDep,
     collection_id: int,
     document_id: int,
     collection_service: CollectionServiceDep,
 ):
     collection_service.remove_document_from_collection(
-        user_id=int(access_token.sub),
+        user_id=current_user.id,
         collection_id=collection_id,
         document_id=document_id,
     )

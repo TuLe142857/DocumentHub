@@ -8,4 +8,3 @@ class CategorySchema(BaseModel):
 
     id: Annotated[int, Field()]
     name: Annotated[str, Field()]
-

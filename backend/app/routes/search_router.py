@@ -1,9 +1,9 @@
 from fastapi import APIRouter
 
 from app.core import APIResponse, ResponsePaginationSchema
-from app.core.sercurity.jwt import OptionalAccessToken
 from app.schemas.document_schema import DocumentSummaryResponse
 from app.schemas.search_schema import SearchQueryDep
+from app.services.auth_service import OptionalCurrentUserDep
 from app.services.search_service import SearchServiceDep
 
 router = APIRouter(prefix="/search", tags=["Search"])
@@ -11,12 +11,12 @@ router = APIRouter(prefix="/search", tags=["Search"])
 
 @router.get("", response_model=ResponsePaginationSchema[DocumentSummaryResponse])
 def search(
-    access_token: OptionalAccessToken,
     query: SearchQueryDep,
+    current_user: OptionalCurrentUserDep,
     search_service: SearchServiceDep,
 ):
-    if access_token:
-        user_id = int(access_token.sub)
+    if current_user is not None:
+        user_id = current_user.id
         docs, total_docs = search_service.search_documents_with_personalization(
             user_id=user_id,
             keywords=query.keywords,

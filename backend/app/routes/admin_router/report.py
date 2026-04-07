@@ -2,14 +2,11 @@ from fastapi import APIRouter
 
 from app.core import (
     APIResponse,
-    AppException,
-    ErrorCode,
     PaginationQueryDep,
     ResponsePaginationSchema,
     ResponseSuccessSchema,
 )
-from app.core.sercurity import AccessToken
-from app.services.auth_service import AuthServiceDep
+from app.services.auth_service import CurrentAdminDep
 
 router = APIRouter(prefix="/reports")
 from app.schemas.report_schemas import (
@@ -23,8 +20,8 @@ from app.services.report_service import ReportServiceDep
 @router.get("", response_model=ResponsePaginationSchema[ReportedDocumentSchema])
 def get_reported_document(
     pagination: PaginationQueryDep,
+    admin: CurrentAdminDep,
 ):
-
     return APIResponse.ok()
 
 
@@ -34,12 +31,9 @@ def get_reported_document(
 def list_pending_report_of_documents(
     document_id: int,
     pagination: PaginationQueryDep,
-    access_token: AccessToken,
-    auth_service: AuthServiceDep,
+    admin: CurrentAdminDep,
     report_service: ReportServiceDep,
 ):
-    if not auth_service.is_admin(int(access_token.sub)):
-        raise AppException(ErrorCode.FORBIDDEN)
     reports, count = report_service.list_pending_reports(
         document_id=document_id, page=pagination.page, limit=pagination.limit
     )
@@ -55,15 +49,12 @@ def list_pending_report_of_documents(
 @router.post("/documents/{document_id}", response_model=ResponseSuccessSchema)
 def handle_report(
     body: ReportHandleRequest,
-    access_token: AccessToken,
-    auth_service: AuthServiceDep,
+    admin: CurrentAdminDep,
     report_service: ReportServiceDep,
 ):
-    if not auth_service.is_admin(int(access_token.sub)):
-        raise AppException(ErrorCode.FORBIDDEN)
     report_service.handler_all_report_of_document(
         document_id=body.document_id,
-        admin_id=int(access_token.sub),
+        admin_id=admin.id,
         accept=body.accept,
         note=body.note,
     )

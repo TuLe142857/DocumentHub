@@ -44,11 +44,11 @@ class StorageService:
 
     def generate_presigned_url_for_document(
         self, document: Document
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str, str]:
         """
         Args:
             document: Document to generate presigned url
-        Returns: tuple[thumbnail_url, preview_url]
+        Returns: tuple[thumbnail_url, preview_url, original_url]
         """
         settings = get_settings()
         bucket = settings.S3_DOCUMENTS_BUCKET
@@ -62,12 +62,12 @@ class StorageService:
             response_content_type="Application/pdf",
             base_url=base_url,
         )
-        # original_url = self.generate_s3_presigned_url(
-        #     bucket,
-        #     document.file_object_key,
-        #     base_url=base_url,
-        # )
-        return thumbnail_url, preview_url
+        original_url = self.generate_s3_presigned_url(
+            bucket,
+            document.file_object_key,
+            base_url=base_url,
+        )
+        return thumbnail_url, preview_url, original_url
 
     def generate_download_url_for_document(self, document: Document) -> tuple[str, str]:
         """

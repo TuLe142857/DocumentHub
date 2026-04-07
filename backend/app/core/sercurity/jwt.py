@@ -1,29 +1,62 @@
-from dataclasses import dataclass
+import dataclasses
 import datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, ClassVar, Literal
+import uuid
 
-from fastapi import Body, Cookie, Depends, Header
+from fastapi import Body, Depends
 from fastapi.security import APIKeyCookie, APIKeyHeader
 import jwt
 
 from app.core import AppException, ErrorCode, get_settings
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class JWTPayload:
+    # Static Constant
+    RESERVED_KEYS: ClassVar[list[str]] = ["jti", "sub", "token_type", "fresh", "exp"]
+
+    # Fields
     sub: str
     token_type: Literal["access", "refresh"]
     fresh: bool
     exp: int
-    claim: dict[str, Any]
+    claim: dict[str, Any] = dataclasses.field(default_factory=dict)
+    jti: str = dataclasses.field(default_factory=lambda: str(uuid.uuid4()))
+
+    def __post_init__(self):
+        """
+        Handle validate
+        """
+        if self.token_type not in ["access", "refresh"]:
+            raise ValueError(
+                f"Invalid token_type '{self.token_type}'. Available token_type values are ['access', 'refresh']"
+            )
+        for extra_key in self.claim:
+            if extra_key in JWTPayload.RESERVED_KEYS:
+                raise ValueError(
+                    f"Keyword '{extra_key}' is reserved and cannot be overridden in claim."
+                )
 
     def to_dict(self) -> dict[str, Any]:
         data = {k: v for k, v in self.claim.items()}
-        data["sub"] = self.sub
-        data["type"] = self.token_type
-        data["fresh"] = self.fresh
-        data["exp"] = self.exp
+        for k in JWTPayload.RESERVED_KEYS:
+            data[k] = getattr(self, k)
         return data
+
+    @staticmethod
+    def from_dict(data: dict[str, Any]) -> "JWTPayload":
+        """
+        Raises: ValueError when validate failed
+        """
+        for required_key in JWTPayload.RESERVED_KEYS:
+            if required_key not in data:
+                raise ValueError(
+                    f"Missing required key '{required_key}' when creating JWTPayload from dict."
+                )
+
+        init_fields = {k: data[k] for k in JWTPayload.RESERVED_KEYS}
+        claim = {k: data[k] for k in data if k not in JWTPayload.RESERVED_KEYS}
+        return JWTPayload(**init_fields, claim=claim)
 
 
 class JWTService:
@@ -39,68 +72,55 @@ class JWTService:
         self.access_token_expire_seconds = access_token_expire_seconds
         self.refresh_token_expire_seconds = refresh_token_expire_seconds
 
-    def generate_access_token(
-        self, sub: str, fresh: bool = False, claim: dict | None = None
-    ):
-        payload = {
-            "sub": sub,
-            "type": "access",
-            "fresh": fresh,
-            "exp": datetime.datetime.now(datetime.timezone.utc)
-            + datetime.timedelta(seconds=int(self.access_token_expire_seconds)),
-        }
-        if claim:
-            for key, value in claim.items():
-                if key in ["sub", "type", "fresh", "exp"]:
-                    raise RuntimeError(
-                        f"Claim key '{key}' is reserved and cannot be overridden."
-                    )
-                payload[key] = value
-        return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
-
-    def generate_refresh_token(self, sub: str, claim: dict | None = None):
-        payload = {
-            "sub": sub,
-            "type": "refresh",
-            "fresh": True,
-            "exp": datetime.datetime.now(datetime.timezone.utc)
-            + datetime.timedelta(seconds=int(self.refresh_token_expire_seconds)),
-        }
-        if claim:
-            for key, value in claim.items():
-                if key in ["sub", "type", "fresh", "exp"]:
-                    raise RuntimeError(
-                        f"Claim key '{key}' is reserved and cannot be overridden."
-                    )
-                payload[key] = value
-        return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
+    def generate_token(self, payload: JWTPayload) -> str:
+        return jwt.encode(payload.to_dict(), self.secret_key, algorithm=self.algorithm)
 
     def validate_token(self, token: str) -> JWTPayload:
         try:
-            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
-
-            token_type = payload.get("type")
-            sub = payload.get("sub")
-            fresh = payload.get("fresh")
-            exp = payload.get("exp")
-            claim = {
-                k: v
-                for k, v in payload.items()
-                if (k not in ["sub", "type", "fresh", "exp"])
-            }
-
-            if token_type != "access" and token_type != "refresh":
-                raise AppException(
-                    ErrorCode.INVALID_JWT_TOKEN,
-                    f"Invalid JWT token type. Expect 'access' or 'refresh' but got {token_type} instead.",
-                )
-            return JWTPayload(
-                sub=sub, token_type=token_type, fresh=fresh, exp=exp, claim=claim
+            payload_dict = jwt.decode(
+                token, self.secret_key, algorithms=[self.algorithm]
             )
+            payload = JWTPayload.from_dict(payload_dict)
+            return payload
         except jwt.ExpiredSignatureError:
             raise AppException(ErrorCode.JWT_TOKEN_EXPIRED, "JWT token has expired")
         except jwt.InvalidTokenError:
             raise AppException(ErrorCode.INVALID_JWT_TOKEN, "Invalid JWT token")
+        except ValueError:
+            # when validate jwt payload
+            raise AppException(ErrorCode.INVALID_JWT_TOKEN, "Invalid JWT token")
+
+    def generate_access_token(
+        self, sub: str, fresh: bool = False, claim: dict | None = None
+    ) -> tuple[str, JWTPayload]:
+        exp_datetime = datetime.datetime.now(
+            datetime.timezone.utc
+        ) + datetime.timedelta(seconds=int(self.access_token_expire_seconds))
+        exp_int = int(exp_datetime.timestamp())
+        payload = JWTPayload(
+            sub=sub,
+            token_type="access",
+            fresh=fresh,
+            exp=exp_int,
+            claim=claim if (claim is not None) else {},
+        )
+        return self.generate_token(payload), payload
+
+    def generate_refresh_token(
+        self, sub: str, claim: dict | None = None
+    ) -> tuple[str, JWTPayload]:
+        exp_datetime = datetime.datetime.now(
+            datetime.timezone.utc
+        ) + datetime.timedelta(seconds=int(self.refresh_token_expire_seconds))
+        exp_int = int(exp_datetime.timestamp())
+        payload = JWTPayload(
+            sub=sub,
+            token_type="refresh",
+            fresh=True,
+            exp=exp_int,
+            claim=claim if (claim is not None) else {},
+        )
+        return self.generate_token(payload), payload
 
     def validate_refresh_token(self, refresh_token: str) -> JWTPayload:
         payload = self.validate_token(refresh_token)
@@ -118,7 +138,7 @@ class JWTService:
         if payload.token_type != "access":
             raise AppException(
                 ErrorCode.INVALID_JWT_TOKEN,
-                f"Require JWT token type 'access' got '{payload.token_type} instead.'",
+                f"Require JWT token type 'access' got '{payload.token_type}' instead.",
             )
         if require_fresh and (not payload.fresh):
             raise AppException(
@@ -162,7 +182,7 @@ AccessHeaderDep = Annotated[
 class AccessPayloadProvider:
     """
     A callable class for fastapi dependencies.
-    Use to decode, validate and provide JWT access token stored on cookie or header.
+    Use to decode, validate and provide JWT access payload stored on cookie or header.
     """
 
     def __init__(self, optional: bool = False, fresh: bool = False):
@@ -219,7 +239,7 @@ RefreshBodyDep = Annotated[str | None, Body(alias="refresh_token", embed=True)]
 class RefreshPayloadProvider:
     """
     A callable class for fastapi dependencies.
-    Use to decode, validate and provide JWT refresh token stored on cookie or header.
+    Use to decode, validate and provide JWT refresh payload stored on cookie or header.
     """
 
     def __init__(self, optional: bool = False):

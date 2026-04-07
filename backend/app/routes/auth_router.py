@@ -1,13 +1,13 @@
 from fastapi import APIRouter
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 
 from app.core import APIResponse, ErrorCode, ResponseSuccessSchema
-from app.core.sercurity import AccessToken, RefreshToken
-from app.dependencies import DBSessionDep
-from app.models import User
+from app.core.sercurity import RefreshToken
 from app.schemas.auth_schema import *
-from app.services.auth_service import AuthServiceDep
+from app.services.auth_service import (
+    AuthServiceDep,
+    CurrentUserDep,
+    OptionalCurrentUserDep,
+)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -17,20 +17,9 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
     response_model=ResponseSuccessSchema[SelfInfoResponse],
     summary="Get self info(require login)",
 )
-def whoami(access_token: AccessToken, db_session: DBSessionDep):
-    user_id = str(access_token.sub)
-    user = db_session.execute(
-        select(User).options(selectinload(User.role)).where(User.id == user_id)
-    ).scalar_one_or_none()
-    if user:
-        res = SelfInfoResponse.model_validate(user)
-
-        return APIResponse.ok(data=res)
-    else:
-        return APIResponse.error(
-            ErrorCode.INVALID_CREDENTIALS,
-            message=f"Invalid credentials.",
-        )
+def whoami(user: CurrentUserDep):
+    res = SelfInfoResponse.model_validate(user)
+    return APIResponse.ok(data=res)
 
 
 @router.post(
