@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from app.core import APIResponse, ResponseSuccessSchema
 from app.schemas.report_schemas import ReportReasonSchema, ReportRequest
-from app.services.auth_service import CurrentUserDep, OptionalCurrentUserDep
+from app.services.auth_service import CurrentUserDep
 from app.services.report_service import ReportServiceDep
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -26,7 +26,7 @@ def report_document(
     report_service: ReportServiceDep,
 ):
     report_service.report_document(
-        reporter_id=current_user.id,
+        reporter=current_user,
         document_id=int(document_id),
         reason=body.reason,
         desc=body.desc,

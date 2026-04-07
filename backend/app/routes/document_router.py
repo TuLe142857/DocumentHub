@@ -131,17 +131,21 @@ def get_document_details(
     document_service: DocumentServiceDep,
     storage_service: StorageServiceDep,
 ):
-    user_id = current_user.id if current_user else None
-    document = document_service.view_document(user_id, document_id)
+    document = document_service.view_document(current_user, document_id)
 
     thumbnail_url, preview_url, _ = storage_service.generate_presigned_url_for_document(
         document
     )
+
+    check_like = False
+    if current_user is not None:
+        check_like = document_service.check_like(document_id, current_user.id)
+
     response_data = DocumentDetailsResponse.build(
         document,
         thumbnail_url=thumbnail_url,
         preview_url=preview_url,
-        liked=document_service.is_liked(document_id, user_id),
+        liked=check_like,
     )
 
     return APIResponse.ok(data=response_data)
@@ -160,7 +164,7 @@ def update_document(
 ):
     update_data = body.model_dump(exclude_unset=True)
     document_service.update_document(
-        user_id=current_user.id, document_id=document_id, **update_data
+        user=current_user, document_id=document_id, **update_data
     )
     return APIResponse.ok(data=update_data)
 
@@ -176,9 +180,7 @@ def delete_document(
     current_user: CurrentUserDep,
     document_id: int,
 ):
-    document_service.soft_delete_document(
-        document_id=document_id, user_id=current_user.id
-    )
+    document_service.soft_delete_document(user=current_user, document_id=document_id)
     return APIResponse.ok()
 
 
@@ -193,7 +195,7 @@ def restore_document(
     current_user: CurrentUserDep,
     document_id: int,
 ):
-    document_service.restore_document(document_id=document_id, user_id=current_user.id)
+    document_service.restore_document(user=current_user, document_id=document_id)
     return APIResponse.ok()
 
 
@@ -209,7 +211,7 @@ def add_tag(
     document_service: DocumentServiceDep,
 ):
     document_service.add_tag_to_document(
-        document_id=document_id, user_id=current_user.id, tag_name=tag_name
+        user=current_user, document_id=document_id, tag_name=tag_name
     )
     return APIResponse.ok()
 
@@ -226,7 +228,7 @@ def remove_tag(
     document_service: DocumentServiceDep,
 ):
     document_service.remove_tag_from_document(
-        document_id=document_id, user_id=current_user.id, tag_name=tag_name
+        user=current_user, document_id=document_id, tag_name=tag_name
     )
     return APIResponse.ok()
 
@@ -240,7 +242,7 @@ def remove_tag(
 def like_document(
     current_user: CurrentUserDep, document_id: int, document_service: DocumentServiceDep
 ):
-    document_service.like_document(document_id=document_id, user_id=current_user.id)
+    document_service.like_document(user=current_user, document_id=document_id)
     return APIResponse.ok()
 
 
@@ -253,7 +255,7 @@ def like_document(
 def unlike_document(
     current_user: CurrentUserDep, document_id: int, document_service: DocumentServiceDep
 ):
-    document_service.unlike_document(document_id=document_id, user_id=current_user.id)
+    document_service.unlike_document(user=current_user, document_id=document_id)
     return APIResponse.ok()
 
 
@@ -273,6 +275,6 @@ def download_document(
 ):
     user_id = current_user.id if current_user else None
     url = document_service.download_document(
-        user_id=user_id, document_id=document_id, document_format=document_type
+        user=current_user, document_id=document_id, document_format=document_type
     )
     return APIResponse.ok(data=url)

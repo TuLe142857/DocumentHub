@@ -19,7 +19,7 @@ class RecommendationService:
         self.crud_doc = crud_doc
         self.crud_user = crud_user
 
-    def get_personalize(self, user_id: int, limit: int) -> Sequence[Document]:
+    def get_personalize(self, user: User, limit: int) -> Sequence[Document]:
         """
         Coming soon :D
         """

@@ -168,28 +168,38 @@ class DocumentService:
         # call task to generate preview version(pdf) for document
         generate_document_preview_task.delay(document_id=new_document.id)
 
-    def view_document(self, user_id: int | None, document_id: int) -> Document:
+    def view_document(self, user: User | None, document_id: int) -> Document:
         """
         Check permission and return document.
         Increase document view.
         """
-        err = self.access_control.can_view_document(user_id, document_id)
-        if err:
-            raise err
 
-        doc: Document = self.db_session.execute(
-            select(Document).where(Document.id == document_id)
-        ).scalar_one_or_none()
+        document = self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
 
-        # increase view
-        redis_view_key = f"view:doc:{document_id}:user:{user_id}"
-        if self.redis_client.set(redis_view_key, "1", ex=3600, nx=True):
-            doc.view_count += 1
-            self.db_session.flush()
-        return doc
+        if user is None:
+            # document view by guest (not login)
+            err = self.access_control.can_view_by_anyone(document)
+            if err:
+                raise err
+        else:
+            # document view by user
+            err = self.access_control.can_view_document(user, document)
+            if err:
+                raise err
+            # increase view
+            redis_view_key = f"view:doc:{document_id}:user:{user.id}"
+            if self.redis_client.set(redis_view_key, "1", ex=3600, nx=True):
+                document.view_count += 1
+                self.db_session.flush()
+        return document
 
     def download_document(
-        self, user_id: int, document_id: int, document_format: str = ".pdf"
+        self, user: User, document_id: int, document_format: str = ".pdf"
     ) -> str:
         """
         Check permission and return download url. Increase download count.
@@ -202,9 +212,10 @@ class DocumentService:
             ),
         )
 
-        err = self.access_control.can_view_document(user_id, document)
+        err = self.access_control.can_download_document(user, document)
         if err:
             raise err
+
         available_formats = {".pdf", document.file_type}
         if not (document_format in available_formats):
             raise AppException(
@@ -212,10 +223,9 @@ class DocumentService:
                 f"Invalid document format for download. Available formats: {available_formats}",
             )
 
-        redis_download_key = f"download:doc:{document_id}:user:{user_id}"
+        redis_download_key = f"download:doc:{document_id}:user:{user.id}"
         if self.redis_client.set(redis_download_key, "1", ex=3600, nx=True):
             document.download_count += 1
-            self.db_session.flush()
 
         ori_url, pdf_url = self.storage_service.generate_download_url_for_document(
             document
@@ -225,7 +235,7 @@ class DocumentService:
             return pdf_url
         return ori_url
 
-    def is_liked(self, document_id: int, user_id: int):
+    def check_like(self, document_id: int, user_id: int):
         """
         Check if document is liked by a specified user.
         """
@@ -241,7 +251,7 @@ class DocumentService:
 
     def update_document(
         self,
-        user_id: int,
+        user: User,
         document_id: int,
         desc: str | None = None,
         title: str | None = None,
@@ -252,16 +262,17 @@ class DocumentService:
         """
         Any param left default None value will be ignored.
         """
-
-        err = self.access_control.can_update_document(user_id, document_id)
-        if err:
-            raise err
         document = self.crud_doc.get(
             document_id,
             on_not_found=AppException(
                 ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
             ),
         )
+
+        err = self.access_control.can_update_document(user, document)
+        if err:
+            raise err
+
         update_dict = {}
         if desc:
             update_dict["desc"] = desc
@@ -281,57 +292,87 @@ class DocumentService:
 
         self.crud_doc.update(document, update_dict)
 
-    def add_tag_to_document(self, document_id: int, user_id: int, tag_name: str):
-        err = self.access_control.can_update_document(user_id, document_id)
-        if err:
-            raise err
-        self.crud_doc.add_tags(self.crud_doc.get(document_id), [tag_name])
-
-    def remove_tag_from_document(self, document_id: int, user_id: int, tag_name: str):
-        err = self.access_control.can_update_document(user_id, document_id)
-        if err:
-            raise err
-        self.crud_doc.remove_tags(self.crud_doc.get(document_id), [tag_name])
-
-    def like_document(self, document_id: int, user_id: int):
-        err = self.access_control.can_view_document(user_id, document_id)
-        if err:
-            raise err
-        self.crud_doc.add_like(self.crud_doc.get(document_id), user_id)
-
-    def unlike_document(self, document_id: int, user_id: int):
-        err = self.access_control.can_view_document(user_id, document_id)
-        if err:
-            raise err
-        self.crud_doc.remove_like(self.crud_doc.get(document_id), user_id)
-
-    def soft_delete_document(self, document_id: int, user_id: int):
-        err = self.access_control.can_delete_document(user_id, document_id)
-        if err:
-            raise err
-        self.crud_doc.soft_delete(self.crud_doc.get(document_id))
-
-    # def get_trash_list(self, user_id: int) -> Sequence[Document]:
-    #     return (
-    #         self.db_session.execute(
-    #             select(Document).where(
-    #                 Document.owner_id == user_id, Document.deleted_at != None
-    #             )
-    #         )
-    #         .scalars()
-    #         .all()
-    #     )
-
-    def restore_document(self, document_id: int, user_id: int):
-        err = self.access_control.can_restore_document(user_id, document_id)
-        if err:
-            raise err
+    def add_tag_to_document(self, user: User, document_id: int, tag_name: str):
         document = self.crud_doc.get(
             document_id,
             on_not_found=AppException(
                 ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
             ),
         )
+
+        err = self.access_control.can_update_document(user, document)
+        if err:
+            raise err
+
+        self.crud_doc.add_tags(document, [tag_name])
+
+    def remove_tag_from_document(self, user: User, document_id: int, tag_name: str):
+        document = self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
+
+        err = self.access_control.can_update_document(user, document)
+        if err:
+            raise err
+
+        self.crud_doc.remove_tags(self.crud_doc.get(document_id), [tag_name])
+
+    def like_document(self, user: User, document_id: int):
+        document = self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
+
+        err = self.access_control.can_view_document(user, document)
+        if err:
+            raise err
+        self.crud_doc.add_like(self.crud_doc.get(document_id), user.id)
+
+    def unlike_document(self, user: User, document_id: int):
+        document = self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
+
+        err = self.access_control.can_view_document(user, document)
+        if err:
+            raise err
+
+        self.crud_doc.remove_like(document, user.id)
+
+    def soft_delete_document(self, user: User, document_id: int):
+        document = self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
+
+        err = self.access_control.can_delete_document(user, document)
+        if err:
+            raise err
+
+        self.crud_doc.soft_delete(document)
+
+    def restore_document(self, user: User, document_id: int):
+        document = self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
+
+        err = self.access_control.can_restore_document(user, document)
+        if err:
+            raise err
+
         if document.deleted_at is None:
             raise AppException(ErrorCode.RESOURCE_CONFLICT, "Document is not deleted")
         document.deleted_at = None
@@ -341,16 +382,18 @@ class DocumentService:
             document.status = DocumentStatus.READY
         self.db_session.add(document)
 
-    def ban_document(self, document_id: int, admin_id: int, note: str | None = None):
-        err = self.access_control.can_ban_document(admin_id, document_id)
-        if err:
-            raise err
+    def ban_document(self, admin: User, document_id: int, note: str | None = None):
         document = self.crud_doc.get(
             document_id,
             on_not_found=AppException(
                 ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
             ),
         )
+
+        err = self.access_control.can_ban_document(admin, document)
+        if err:
+            raise err
+
         if document.status == DocumentStatus.BANNED:
             raise AppException(
                 ErrorCode.RESOURCE_CONFLICT, "Document is already banned"
@@ -360,7 +403,7 @@ class DocumentService:
         document.banned_at = datetime.datetime.now(datetime.timezone.utc)
         moderation_log = ModerationLog(
             document_id=document_id,
-            admin_id=admin_id,
+            admin_id=admin.id,
             action=ModerationAction.BAN_DOCUMENT,
             note=note,
         )
@@ -368,16 +411,18 @@ class DocumentService:
         self.db_session.add(document)
         self.db_session.add(moderation_log)
 
-    def unban_document(self, document_id: int, admin_id: int, note: str | None = None):
-        err = self.access_control.can_unban_document(admin_id, document_id)
-        if err:
-            raise err
+    def unban_document(self, admin: User, document_id: int, note: str | None = None):
         document = self.crud_doc.get(
             document_id,
             on_not_found=AppException(
                 ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
             ),
         )
+
+        err = self.access_control.can_unban_document(admin, document)
+        if err:
+            raise err
+
         if document.status != DocumentStatus.BANNED:
             raise AppException(ErrorCode.RESOURCE_CONFLICT, "Document not banned")
 
@@ -389,7 +434,7 @@ class DocumentService:
         document.banned_at = None
         moderation_log = ModerationLog(
             document_id=document_id,
-            admin_id=admin_id,
+            admin_id=admin,
             action=ModerationAction.UNBAN_DOCUMENT,
             note=note,
         )

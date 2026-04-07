@@ -42,7 +42,7 @@ class CollectionService:
 
     def list_document(
         self,
-        user_id: int,
+        user: User,
         collection_id: int,
         page: int = 1,
         limit: int = 10,
@@ -54,7 +54,7 @@ class CollectionService:
             ),
         )
 
-        err = self.access_control.can_view_collection(user_id, collection)
+        err = self.access_control.can_view_collection(user, collection)
         if err is not None:
             raise err
 
@@ -80,7 +80,7 @@ class CollectionService:
         )
         return res, count
 
-    def rename_collection(self, user_id: int, collection_id: int, new_name: str):
+    def rename_collection(self, user: User, collection_id: int, new_name: str):
         collection = self.crud_collection.get(
             collection_id,
             on_not_found=AppException(
@@ -88,14 +88,14 @@ class CollectionService:
             ),
         )
 
-        err = self.access_control.can_update_collection(user_id, collection)
+        err = self.access_control.can_update_collection(user, collection)
         if err is not None:
             raise err
 
         self.crud_collection.update(collection, {"name": new_name})
 
     def add_document_to_collection(
-        self, user_id: int, collection_id: int, document_id: int
+        self, user: User, collection_id: int, document_id: int
     ):
 
         collection = self.crud_collection.get(
@@ -105,13 +105,13 @@ class CollectionService:
             ),
         )
 
-        err = self.access_control.can_update_collection(user_id, collection)
+        err = self.access_control.can_update_collection(user, collection)
         if err is not None:
             raise err
         self.crud_collection.add_document(collection, document_id)
 
     def remove_document_from_collection(
-        self, user_id: int, collection_id: int, document_id: int
+        self, user: User, collection_id: int, document_id: int
     ):
         collection = self.crud_collection.get(
             collection_id,
@@ -120,13 +120,13 @@ class CollectionService:
             ),
         )
 
-        err = self.access_control.can_update_collection(user_id, collection)
+        err = self.access_control.can_update_collection(user, collection)
         if err is not None:
             raise err
 
         self.crud_collection.remove_document(collection, document_id)
 
-    def delete_collection(self, user_id: int, collection_id: int):
+    def delete_collection(self, user: User, collection_id: int):
         collection = self.crud_collection.get(
             collection_id,
             on_not_found=AppException(
@@ -134,7 +134,7 @@ class CollectionService:
             ),
         )
 
-        err = self.access_control.can_delete_collection(user_id, collection)
+        err = self.access_control.can_delete_collection(user, collection)
         if err is not None:
             raise err
 

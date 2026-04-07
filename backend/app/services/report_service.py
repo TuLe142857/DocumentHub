@@ -30,26 +30,8 @@ class ReportService:
         return self.db_session.execute(select(ReportReason)).scalars().all()
 
     def report_document(
-        self, reporter_id: int, document_id: int, reason: int, desc: str | None
+        self, reporter: User, document_id: int, reason: int, desc: str | None
     ):
-        # check if user has report this document...
-        report_in_db = self.db_session.execute(
-            select(DocumentReport).where(
-                DocumentReport.reporter_id == reporter_id,
-                DocumentReport.document_id == document_id,
-                DocumentReport.status == ReportStatus.PENDING,
-            )
-        ).scalar_one_or_none()
-        if report_in_db is not None:
-            raise AppException(
-                ErrorCode.ACTION_ALREADY_PERFORMED,
-                "You have already reported this document and it is still under review.",
-            )
-
-        reporter = self.crud_user.get(
-            reporter_id,
-            on_not_found=AppException(ErrorCode.INVALID_CREDENTIALS, "User not found"),
-        )
         document = self.crud_doc.get(
             document_id,
             on_not_found=AppException(
@@ -57,6 +39,22 @@ class ReportService:
             ),
         )
 
+        # check if user has report this document...
+        report_in_db = self.db_session.execute(
+            select(DocumentReport).where(
+                DocumentReport.reporter_id == reporter.id,
+                DocumentReport.document_id == document_id,
+                DocumentReport.status == ReportStatus.PENDING,
+            )
+        ).scalar_one_or_none()
+
+        if report_in_db is not None:
+            raise AppException(
+                ErrorCode.ACTION_ALREADY_PERFORMED,
+                "You have already reported this document and it is still under review.",
+            )
+
+        # make report
         self.crud_report.create(
             DocumentReport(
                 document=document, reporter=reporter, report_reason_id=reason, desc=desc
@@ -101,12 +99,8 @@ class ReportService:
         )
 
     def handler_all_report_of_document(
-        self, document_id: int, admin_id: int, accept: bool, note: str | None
+        self, admin: User, document_id: int, accept: bool, note: str | None
     ):
-        admin: User = self.crud_user.get(
-            admin_id,
-            on_not_found=AppException(ErrorCode.INVALID_CREDENTIALS, "User not found"),
-        )
         if admin.role.name != "ADMIN":
             raise AppException(ErrorCode.FORBIDDEN)
 
@@ -131,7 +125,7 @@ class ReportService:
         )
 
         mod_log = ModerationLog(
-            admin_id=admin_id,
+            admin_id=admin.id,
             document_id=document_id,
             action=ModerationAction.BAN_DOCUMENT
             if accept

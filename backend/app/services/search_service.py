@@ -71,7 +71,7 @@ class SearchService:
 
     def search_documents_with_personalization(
         self,
-        user_id: int,
+        user: User,
         keywords: str,
         category_id: int | None = None,
         tags: Sequence[str] = None,

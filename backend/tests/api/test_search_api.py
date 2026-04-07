@@ -10,3 +10,13 @@ def test_search_api(client, seeded_db):
         "keywords": keyword,
     }
     assert_response_ok(client.get("/search", params=search_params))
+
+
+def test_search_api_after_login(auth_client, seeded_db):
+    keyword = seeded_db.public_document.title.split()[0]
+    search_params = {
+        "page": 1,
+        "limit": 10,
+        "keywords": keyword,
+    }
+    assert_response_ok(auth_client.get("/search", params=search_params))

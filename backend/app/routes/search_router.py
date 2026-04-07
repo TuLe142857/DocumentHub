@@ -16,9 +16,8 @@ def search(
     search_service: SearchServiceDep,
 ):
     if current_user is not None:
-        user_id = current_user.id
         docs, total_docs = search_service.search_documents_with_personalization(
-            user_id=user_id,
+            user=current_user,
             keywords=query.keywords,
             category_id=query.category_id,
             tags=query.tags,

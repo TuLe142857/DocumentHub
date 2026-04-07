@@ -83,19 +83,21 @@ def seed_database(
                 role=role_admin,
                 profile=UserProfile(),
             )
-
-            user = User(
-                email="user@mail.com",
-                username="username",
-                role=role_user,
-                profile=UserProfile(),
-            )
-
             admin.set_password(default_password)
-            user.set_password(default_password)
-
             session.add(admin)
-            session.add(user)
+
+            for i in range(1, 101):
+                email = f"user{i}@mail.com"
+                username = f"username{i}"
+
+                user = User(
+                    email=email,
+                    username=username,
+                    role=role_user,
+                    profile=UserProfile(),
+                )
+                user.set_password(default_password)
+                session.add(user)
 
             """
                     GENERATE CATEGORY

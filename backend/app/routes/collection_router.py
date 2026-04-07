@@ -60,7 +60,7 @@ def get_documents_in_collection(
     pagination: PaginationQueryDep,
 ):
     documents, total = collection_service.list_document(
-        user_id=current_user.id,
+        user=current_user,
         collection_id=int(collection_id),
         page=pagination.page,
         limit=pagination.limit,
@@ -82,7 +82,7 @@ def rename_collection(
     collection_service: CollectionServiceDep,
 ):
     collection_service.rename_collection(
-        user_id=current_user.id, collection_id=collection_id, new_name=new_name
+        user=current_user, collection_id=collection_id, new_name=new_name
     )
     return APIResponse.ok()
 
@@ -94,7 +94,7 @@ def delete_collection(
     collection_service: CollectionServiceDep,
 ):
     collection_service.delete_collection(
-        user_id=current_user.id,
+        user=current_user,
         collection_id=collection_id,
     )
     return APIResponse.ok()
@@ -110,7 +110,7 @@ def add_document_to_collection(
     collection_service: CollectionServiceDep,
 ):
     collection_service.add_document_to_collection(
-        user_id=current_user.id,
+        user=current_user,
         collection_id=collection_id,
         document_id=document_id,
     )
@@ -127,7 +127,7 @@ def remove_document_from_collection(
     collection_service: CollectionServiceDep,
 ):
     collection_service.remove_document_from_collection(
-        user_id=current_user.id,
+        user=current_user,
         collection_id=collection_id,
         document_id=document_id,
     )

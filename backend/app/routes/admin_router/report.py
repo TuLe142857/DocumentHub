@@ -53,8 +53,8 @@ def handle_report(
     report_service: ReportServiceDep,
 ):
     report_service.handler_all_report_of_document(
+        admin=admin,
         document_id=body.document_id,
-        admin_id=admin.id,
         accept=body.accept,
         note=body.note,
     )
