@@ -7,7 +7,6 @@ from app.core.sercurity import (
     AccessPayloadProvider,
     JWTPayload,
     RefreshPayloadProvider,
-    RefreshToken,
 )
 from app.schemas.auth_schema import *
 from app.services.auth_service import (
@@ -31,7 +30,7 @@ def whoami(user: CurrentUserDep):
 
 @router.post(
     "/register/request",
-    response_model=ResponseSuccessSchema[None],
+    response_model=ResponseSuccessSchema,
     summary="Request registration, provide email to get otp code",
 )
 def request_registration(json_body: RegistrationRequest, auth_service: AuthServiceDep):
@@ -126,7 +125,10 @@ def logout(
     summary="Refresh Access Token",
     description="Write access token to cookie(for web client) and return access token in response data(for mobile client)",
 )
-def refresh_access_token(refresh_token: RefreshToken, auth_service: AuthServiceDep):
+def refresh_access_token(
+    refresh_token: Annotated[JWTPayload, Depends(RefreshPayloadProvider())],
+    auth_service: AuthServiceDep,
+):
     access_token = auth_service.refresh_access_token(refresh_token)
     return APIResponse.ok(data=access_token).set_access_cookie(access_token)
 

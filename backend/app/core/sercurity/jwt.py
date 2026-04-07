@@ -292,14 +292,3 @@ class RefreshPayloadProvider:
                 if exc.error_code == ErrorCode.JWT_TOKEN_EXPIRED:
                     return None
                 raise exc
-
-
-AccessToken = Annotated[JWTPayload, Depends(AccessPayloadProvider())]
-
-FreshAccessToken = Annotated[JWTPayload, Depends(AccessPayloadProvider(fresh=True))]
-
-OptionalAccessToken = Annotated[
-    JWTPayload | None, Depends(AccessPayloadProvider(optional=True))
-]
-
-RefreshToken = Annotated[JWTPayload, Depends(RefreshPayloadProvider())]
