@@ -3,10 +3,10 @@ from fastapi import APIRouter
 from app.core import APIResponse, ResponseSuccessSchema
 from app.schemas.document_schema import DocumentSummaryResponse
 from app.schemas.recommendation_schema import SimilarQueryDep, TrendingQueryDep
-from app.services.auth_service import CurrentUserDep, OptionalCurrentUserDep
+from app.services.auth_service import OptionalCurrentUserDep
+from app.services.recommendation_service import RecommendationServiceDep
 
 router = APIRouter(prefix="/recommendation", tags=["Recommendation"])
-from app.services.recommendation_service import RecommendationServiceDep
 
 
 @router.get(

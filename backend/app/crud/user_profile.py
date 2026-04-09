@@ -1,4 +1,4 @@
-from typing import Annotated, Type
+from typing import Annotated
 
 from fastapi import Depends
 from pydantic import BaseModel
@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.dependencies import DBSessionDep
 from app.models import UserProfile
 
-from .base import CRUDBase, ModelType
+from .base import CRUDBase
 
 
 class CRUDUserProfile(CRUDBase[UserProfile, BaseModel, BaseModel]):

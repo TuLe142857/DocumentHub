@@ -142,7 +142,7 @@ class JWTService:
             )
         if require_fresh and (not payload.fresh):
             raise AppException(
-                ErrorCode.JWT_TOKEN_NOT_FRESH, f"Require fresh JWT access token"
+                ErrorCode.JWT_TOKEN_NOT_FRESH, "Require fresh JWT access token"
             )
         return payload
 

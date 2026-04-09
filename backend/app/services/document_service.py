@@ -1,12 +1,11 @@
 import datetime
-from typing import Annotated, Any, BinaryIO, Sequence
+from typing import Annotated, BinaryIO, Sequence
 import uuid
 
 from fastapi import Depends
 from mypy_boto3_s3 import S3Client
 from redis import Redis
-from sqlalchemy import Select, func, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode, get_settings
@@ -217,7 +216,7 @@ class DocumentService:
             raise err
 
         available_formats = {".pdf", document.file_type}
-        if not (document_format in available_formats):
+        if document_format not in available_formats:
             raise AppException(
                 ErrorCode.UNSUPPORTED_FILE_TYPE,
                 f"Invalid document format for download. Available formats: {available_formats}",

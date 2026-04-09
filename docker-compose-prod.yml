@@ -1,3 +1,18 @@
+x-backend-default: &backend-build-default
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+    target: prod
+    args:
+        UID: ${UID-1000}
+        GID: ${GID-1000}
+  environment:
+    S3_ENDPOINT: https://${MINIO_DOMAIN:?Variable is not set or empty}
+    BACKEND_CORS_ORIGINS: >
+      "
+      https://${FRONTEND_DOMAIN:?Variable is not set or empty},
+      "
+  
 services:
   proxy:
     environment:
@@ -27,41 +42,13 @@ services:
         VITE_API_BASE_URL: https://${BACKEND_DOMAIN:?Variable is not set or empty}/api/v1
 
   backend:
-    build:
-      context: ./backend
-      target: prod
-      args:
-        UID: ${UID-1000}
-        GID: ${GID-1000}
-    environment:
-      S3_ENDPOINT: https://${MINIO_DOMAIN:?Variable is not set or empty}
-      BACKEND_CORS_ORIGINS: >
-        "
-        http://localhost:8000,
-        http://localhost:5173,
-        https://${BACKEND_DOMAIN:?Variable is not set or empty},
-        https://${FRONTEND_DOMAIN:?Variable is not set or empty},
-        "
+    <<: *backend-build-default
 
   celery_worker:
-    build:
-      context: ./backend
-      target: prod
-      args:
-        UID: ${UID-1000}
-        GID: ${GID-1000}
-    environment:
-      S3_ENDPOINT: https://${MINIO_DOMAIN:?Variable is not set or empty}
+    <<: *backend-build-default
 
   celery_beat:
-    build:
-      context: ./backend
-      target: prod
-      args:
-        UID: ${UID-1000}
-        GID: ${GID-1000}
-    environment:
-      S3_ENDPOINT: https://${MINIO_DOMAIN:?Variable is not set or empty}
+    <<: *backend-build-default
 
   db:
     volumes:

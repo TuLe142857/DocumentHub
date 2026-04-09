@@ -4,7 +4,6 @@ from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core import AppException, ErrorCode
 from app.crud.document import CRUDDocument, CRUDDocumentDep
 from app.crud.user import CRUDUser, CRUDUserDep
 from app.dependencies import DBSessionDep

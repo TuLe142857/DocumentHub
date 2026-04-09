@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.core import APIResponse, ResponseErrorSchema, ResponseSuccessSchema
+from app.core import APIResponse, ResponseSuccessSchema
 
 router = APIRouter(prefix="/health", tags=["Health Check"])
 

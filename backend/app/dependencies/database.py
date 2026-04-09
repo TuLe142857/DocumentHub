@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Annotated, Generator
+from typing import Annotated
 
 from fastapi import Depends
 from sqlalchemy import Engine, create_engine

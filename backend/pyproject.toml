@@ -43,7 +43,30 @@ packages = ["app", "scripts"]
 cli = "scripts:run"
 
 [tool.ruff.lint]
-select = ["I"]
+select = [
+    "I",
+    "E",
+    "W",
+    "F"
+]
+
+ignore = [
+    "E501",
+    "F405",
+    "F403"
+]
+
+# test is not source code :D
+exclude = [
+    "tests/**/*.py"
+]
+
+[tool.ruff.lint.per-file-ignores]
+# __init__.py use syntax: from <submodule/file> import <>
+"__init__.py" = ["F401"]
+
+# ORM model class use type from other file without import
+"app/models/**/*.py" = ["F821"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

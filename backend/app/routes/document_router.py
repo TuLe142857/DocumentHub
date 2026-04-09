@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Body, Form, Path, Query
+from fastapi import APIRouter, Form, Path, Query
 
 from app.core import (
     APIResponse,
-    PaginationQueryDep,
     ResponsePaginationSchema,
     ResponseSuccessSchema,
 )
@@ -273,7 +272,6 @@ def download_document(
         str, Query(description="Document format to download", alias="format")
     ] = ".pdf",
 ):
-    user_id = current_user.id if current_user else None
     url = document_service.download_document(
         user=current_user, document_id=document_id, document_format=document_type
     )

@@ -46,6 +46,3 @@ restore:
 	$(DC_EXEC) minio sh -c 'mc alias set doc_hub http://localhost:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD'
 	$(DC_EXEC) minio sh -c 'mc mirror --overwrite /var/backup/minio/documents/ doc_hub/documents'
 	$(DC_EXEC) minio sh -c 'mc mirror --overwrite /var/backup/minio/images/ doc_hub/images'
-
-format-code:
-	cd backend && uvx ruff format && uvx ruff check --fix

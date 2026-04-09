@@ -6,15 +6,15 @@ from app.core import (
     ResponsePaginationSchema,
     ResponseSuccessSchema,
 )
-from app.services.auth_service import CurrentAdminDep
-
-router = APIRouter(prefix="/reports")
 from app.schemas.report_schemas import (
     ReportedDocumentSchema,
     ReportHandleRequest,
     ReportSchema,
 )
+from app.services.auth_service import CurrentAdminDep
 from app.services.report_service import ReportServiceDep
+
+router = APIRouter(prefix="/reports")
 
 
 @router.get("", response_model=ResponsePaginationSchema[ReportedDocumentSchema])

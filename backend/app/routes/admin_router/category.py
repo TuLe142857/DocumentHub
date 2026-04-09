@@ -4,8 +4,6 @@ from fastapi import APIRouter, Body
 
 from app.core import (
     APIResponse,
-    ResponseErrorSchema,
-    ResponsePaginationSchema,
     ResponseSuccessSchema,
 )
 from app.services.auth_service import CurrentAdminDep

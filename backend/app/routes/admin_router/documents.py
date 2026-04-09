@@ -2,8 +2,6 @@ from fastapi import APIRouter
 
 from app.core import (
     APIResponse,
-    PaginationQueryDep,
-    ResponsePaginationSchema,
     ResponseSuccessSchema,
 )
 from app.services.auth_service import CurrentAdminDep

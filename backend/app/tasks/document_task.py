@@ -12,10 +12,8 @@ from app.core import (
     get_settings,
 )
 from app.dependencies import (
-    Gotenberg,
     get_db_engine,
     get_gotenberg,
-    get_redis,
     get_s3,
 )
 from app.models import Document, DocumentStatus
@@ -102,11 +100,12 @@ def auto_delete_document_task():
             stmt = delete(Document).where(
                 or_(
                     and_(
-                        Document.deleted_at != None,
+                        Document.deleted_at is not None,
                         Document.deleted_at < threshold_date,
                     ),
                     and_(
-                        Document.banned_at != None, Document.banned_at < threshold_date
+                        Document.banned_at is not None,
+                        Document.banned_at < threshold_date,
                     ),
                 )
             )

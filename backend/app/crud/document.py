@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import Depends
 from pydantic import BaseModel
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
 from app.dependencies import DBSessionDep
@@ -28,7 +28,7 @@ class CRUDDocument(CRUDBase[Document, BaseModel, BaseModel]):
             tag_obj = (
                 tag if isinstance(tag, Tag) else Tag.get_or_create(tag, self.db_session)
             )
-            if not tag_obj in document.tags:
+            if tag_obj not in document.tags:
                 document.tags.append(tag_obj)
         return self._save(document, auto_commit=auto_commit, auto_flush=auto_flush)
 

@@ -1,5 +1,5 @@
 import datetime
-from typing import Annotated, Literal, Sequence
+from typing import Annotated, Sequence
 
 from fastapi import Depends
 from redis import Redis

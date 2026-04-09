@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import Depends, Query
+from fastapi import Query
 from pydantic import BaseModel, Field
 
 

@@ -9,7 +9,6 @@ from pwdlib.hashers.argon2 import Argon2Hasher
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Engine,
     Enum,
     ForeignKey,
     Integer,

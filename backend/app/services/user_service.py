@@ -2,7 +2,7 @@ from typing import Annotated, BinaryIO, Sequence
 
 from fastapi import Depends
 from mypy_boto3_s3 import S3Client
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode, get_settings
@@ -96,10 +96,6 @@ class UserService:
         self.crud_profile.update(profile, update_dict)
 
     def update_avatar(self, user_id: int, new_avatar: BinaryIO, content_type: str):
-        user = self.crud_user.get(
-            user_id,
-            on_not_found=AppException(ErrorCode.INVALID_CREDENTIALS, "User not found"),
-        )
         avatar_obj_key = f"avatar/{user_id}"
 
         # upload to s3

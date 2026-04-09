@@ -15,7 +15,10 @@ from app.models import *
 from app.routes import register_api_router
 from app.routes.middlewares import register_middleware
 
-from .worker import celery_worker
+from .worker import create_worker
+
+# create worker for celery task to get config
+celery_worker = create_worker()
 
 
 def create_s3_bucket(bucket_name: str):

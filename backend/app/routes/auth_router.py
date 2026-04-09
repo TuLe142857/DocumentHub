@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from app.core import APIResponse, ErrorCode, ResponseSuccessSchema
+from app.core import APIResponse, ResponseSuccessSchema
 from app.core.sercurity import (
     AccessPayloadProvider,
     JWTPayload,
@@ -12,7 +12,6 @@ from app.schemas.auth_schema import *
 from app.services.auth_service import (
     AuthServiceDep,
     CurrentUserDep,
-    OptionalCurrentUserDep,
 )
 
 router = APIRouter(prefix="/auth", tags=["Auth"])

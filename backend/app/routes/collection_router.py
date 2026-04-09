@@ -8,7 +8,7 @@ from app.core import (
 )
 from app.schemas.collection_schema import *
 from app.schemas.document_schema import DocumentSummaryResponse
-from app.services.auth_service import CurrentUserDep, OptionalCurrentUserDep
+from app.services.auth_service import CurrentUserDep
 from app.services.collection_service import CollectionServiceDep
 
 router = APIRouter(prefix="/collections", tags=["Collection"])

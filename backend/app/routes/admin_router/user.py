@@ -4,13 +4,11 @@ from fastapi import APIRouter, Body, Query
 
 from app.core import (
     APIResponse,
-    AppException,
-    ErrorCode,
     ResponsePaginationSchema,
     ResponseSuccessSchema,
 )
 from app.schemas.user_schema import UserSchema, UserSearchQuery
-from app.services.auth_service import AuthServiceDep, CurrentAdminDep
+from app.services.auth_service import CurrentAdminDep
 from app.services.user_service import UserServiceDep
 
 router = APIRouter(prefix="/users")

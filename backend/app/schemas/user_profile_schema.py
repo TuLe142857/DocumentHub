@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 from fastapi import UploadFile
 from pydantic import AfterValidator, AliasPath, BaseModel, ConfigDict, Field
 
-from app.core import AppException, ErrorCode, PaginationQuery, get_settings
+from app.core import AppException, ErrorCode, get_settings
 from app.dependencies import get_s3
 from app.models import Gender
 from app.utils import get_file_extension
@@ -74,7 +74,7 @@ class AvatarUpdateRequest(BaseModel):
     def validate_image_file_extension(file: UploadFile):
         file_name = file.filename
         file_ext = get_file_extension(file_name)
-        if not (file_ext in [".png", ".jpg", ".jpeg"]):
+        if file_ext not in [".png", ".jpg", ".jpeg"]:
             raise AppException(
                 ErrorCode.UNSUPPORTED_FILE_TYPE, f"Invalid image type '{file_ext}'"
             )

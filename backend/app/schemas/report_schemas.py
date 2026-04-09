@@ -1,4 +1,4 @@
-from typing import Annotated, Literal
+from typing import Annotated
 
 from pydantic import AliasPath, BaseModel, BeforeValidator, ConfigDict, Field
 
@@ -25,8 +25,8 @@ class ReportSchema(BaseModel):
 class ReportedDocumentSchema(DocumentSummaryResponse):
     @staticmethod
     def count_report(doc: Document) -> int:
-        l = [_ for _ in doc.reports if _.status == ReportStatus.PENDING]
-        return len(l)
+        r = [_ for _ in doc.reports if _.status == ReportStatus.PENDING]
+        return len(r)
 
     report_count: Annotated[int, Field(), BeforeValidator(count_report)]
 

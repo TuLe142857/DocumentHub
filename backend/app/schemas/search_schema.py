@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import Query
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from app.core import PaginationQuery
 

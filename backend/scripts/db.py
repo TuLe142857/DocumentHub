@@ -20,7 +20,6 @@ def inspect():
 def test():
     from app.crud.user import CRUDUser
     from app.dependencies import get_db_engine
-    from app.models import ORMBase
 
     engine = get_db_engine()
     with Session(engine) as session:
