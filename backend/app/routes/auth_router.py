@@ -45,7 +45,7 @@ def request_registration(json_body: RegistrationRequest, auth_service: AuthServi
 )
 def verify_registration(body: VerifyRegistrationRequest, auth_service: AuthServiceDep):
     registration_token = auth_service.verify_registration(**body.model_dump())
-    response_data = VerifyRegistrationResponse(registration_token=registration_token)
+    response_data = VerifyRegistrationResponse(registration_code=registration_token)
     return APIResponse.ok(data=response_data)
 
 

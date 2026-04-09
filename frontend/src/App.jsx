@@ -4,7 +4,7 @@ import api from '@/api/api.js';
 import { fetchUserInfo } from '@/store/slice/userSlice.jsx';
 import Loading from '@/components/Loading.jsx';
 import AppRoutes from '@/routes/AppRoutes.jsx';
-import ConnectionError from '@/pages/ConnectionError.jsx';
+import ConnectionErrorPage from '@/pages/ConnectionErrorPage.jsx';
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -15,7 +15,7 @@ export default function App() {
     const ping = async () => {
       try {
         setIsLoading(true);
-        await api.get('/health');
+        await api.get('http://localhost:8000/health');
         setConnected(true);
       } catch {
         setConnected(false);
@@ -35,7 +35,7 @@ export default function App() {
   }
 
   if (!connected) {
-    return <ConnectionError />;
+    return <ConnectionErrorPage />;
   }
 
   return <AppRoutes />;

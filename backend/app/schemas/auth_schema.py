@@ -29,7 +29,7 @@ class VerifyRegistrationResponse(BaseModel):
     /api/auth/register/verify
     """
 
-    registration_token: Annotated[str, Field()]
+    registration_code: Annotated[str, Field()]
 
 
 class VerifyRegistrationRequest(BaseModel):

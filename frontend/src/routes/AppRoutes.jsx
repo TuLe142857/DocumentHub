@@ -1,18 +1,21 @@
 import { Routes, Route } from 'react-router-dom';
 import PublicLayout from '@/layouts/PublicLayout.jsx';
 import AdminLayout from '@/layouts/AdminLayout.jsx';
-import NotFound from '@/pages/NotFound.jsx';
+import NotFoundPage from '@/pages/NotFoundPage.jsx';
 import ProtectedRoute from '@/routes/ProtectedRoute.jsx';
-import Home from '@/pages/Home.jsx';
-import Login from '@/pages/Login.jsx';
+import HomePage from '@/pages/HomePage.jsx';
+import LoginPage from '@/pages/LoginPage.jsx';
+import RegisterPage from '@/pages/RegisterPage.jsx'
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage.jsx";
 
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="login" element={<Login />} />
-
+      <Route path="login" element={<LoginPage />} />
+      <Route path="register" element={<RegisterPage />}/>
+      <Route path="forgot-password" element={<ForgotPasswordPage />}/>
       <Route element={<PublicLayout />}>
-        <Route index={true} element={<Home />} />
+        <Route index={true} element={<HomePage />} />
       </Route>
 
       <Route
@@ -24,7 +27,7 @@ const AppRoutes = () => {
         }
       ></Route>
 
-      <Route path="*" element={<NotFound />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 };

@@ -1,7 +1,7 @@
 import { Outlet, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import Loading from '@/components/Loading.jsx';
-import Forbidden from '@/pages/Forbidden.jsx';
+import ForbiddenPage from '@/pages/ForbiddenPage.jsx';
 
 export default function ProtectedRoute({ allowedRoles }) {
   const { user, isLoading, isAuthenticated } = useSelector(
@@ -17,7 +17,7 @@ export default function ProtectedRoute({ allowedRoles }) {
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
-    return <Forbidden />;
+    return <ForbiddenPage />;
   }
 
   return <Outlet />;

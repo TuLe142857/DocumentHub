@@ -22,9 +22,33 @@ const processQueue = (error = null) => {
   failedQueue = [];
 };
 
+const debug_api_success = (res) => {
+  console.group(`Debug API: ${res.config?.method?.toUpperCase()} ${res.config.url}`);
+  console.log("Request config:", res.config);
+  console.log("Response data:", res.data);
+  console.groupEnd();
+}
+
+const debug_api_error = (err) => {
+  console.group(`Debug API ERROR: ${err.config?.method?.toUpperCase()} ${err.config.url}`);
+  console.log("Request:", err.config);
+  console.log("Error response:", err.response?.data);
+  console.log("Error message:", err.message);
+  console.groupEnd();
+}
+
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (import.meta.env.DEV){
+      debug_api_success(response);
+    }
+    return response;
+  },
   async (error) => {
+    if (import.meta.env.DEV){
+      debug_api_error(error);
+    }
+
     const originalRequest = error.config;
     const data = error.response?.data;
     const isRefreshRequest = originalRequest.url.includes('/auth/refresh');
