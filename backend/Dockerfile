@@ -51,7 +51,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ENV PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app/backend
-RUN chown -R appuser:appgroup /app/backend
+RUN chown -R appuser:appgroup /app
 USER appuser
 
 CMD ["fastapi", "dev", "app/main.py", "--reload", "--host", "0.0.0.0", "--port", "8000"]
@@ -64,13 +64,12 @@ CMD ["fastapi", "dev", "app/main.py", "--reload", "--host", "0.0.0.0", "--port",
 FROM base AS prod
 
 WORKDIR /app
-
+COPY backend/app /app/backend/app
 COPY --from=builder /app/.venv /app/.venv/
-COPY --chown=appuser:appgroup backend/app /app/backend/app
 ENV PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app/backend
-RUN chown -R appuser:appgroup /app/backend
+RUN chown -R appuser:appgroup /app
 USER appuser
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
