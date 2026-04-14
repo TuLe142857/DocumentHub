@@ -23,29 +23,33 @@ const processQueue = (error = null) => {
 };
 
 const debug_api_success = (res) => {
-  console.group(`Debug API: ${res.config?.method?.toUpperCase()} ${res.config.url}`);
-  console.log("Request config:", res.config);
-  console.log("Response data:", res.data);
+  console.group(
+    `Debug API: ${res.config?.method?.toUpperCase()} ${res.config.url}`
+  );
+  console.log('Request config:', res.config);
+  console.log('Response data:', res.data);
   console.groupEnd();
-}
+};
 
 const debug_api_error = (err) => {
-  console.group(`Debug API ERROR: ${err.config?.method?.toUpperCase()} ${err.config.url}`);
-  console.log("Request:", err.config);
-  console.log("Error response:", err.response?.data);
-  console.log("Error message:", err.message);
+  console.group(
+    `Debug API ERROR: ${err.config?.method?.toUpperCase()} ${err.config.url}`
+  );
+  console.log('Request:', err.config);
+  console.log('Error response:', err.response?.data);
+  console.log('Error message:', err.message);
   console.groupEnd();
-}
+};
 
 api.interceptors.response.use(
   (response) => {
-    if (import.meta.env.DEV){
+    if (import.meta.env.DEV) {
       debug_api_success(response);
     }
     return response;
   },
   async (error) => {
-    if (import.meta.env.DEV){
+    if (import.meta.env.DEV) {
       debug_api_error(error);
     }
 
@@ -54,7 +58,8 @@ api.interceptors.response.use(
     const isRefreshRequest = originalRequest.url.includes('/auth/refresh');
 
     if (
-      data?.error_code === ERROR_CODE.JWT_TOKEN_EXPIRED &&
+      (data?.error_code === ERROR_CODE.JWT_TOKEN_EXPIRED ||
+        data?.error_code === ERROR_CODE.UNAUTHORIZED) &&
       !originalRequest._retry &&
       !isRefreshRequest
     ) {
@@ -68,14 +73,28 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
       try {
-        await axios.get(`${API_BASE_URL}/auth/refresh`, {
-          withCredentials: true,
-        });
+        console.log('Try refreshing token');
+        await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          {},
+          {
+            withCredentials: true,
+          }
+        );
         processQueue(null);
+        console.log('Refresh token ok');
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
-        window.location.href = '/login';
+        console.log('refreshError:', refreshError?.response?.data);
+
+        if (
+          window.location.pathname !== '/login' &&
+          originalRequest.url.includes('/auth/whoami')
+        ) {
+          alert('please login and try again');
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

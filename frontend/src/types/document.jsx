@@ -3,11 +3,13 @@
  * @property {number} id
  * @property {string} title
  * @property {"PUBLIC"|"PRIVATE"} visibility
- * @property {"PROCESSING"|"COMPLETED"|"FAILED"} status
+ * @property {"PROCESSING"|"READY"|"DELETED"|"BANNED"} status
  * @property {string} owner
  * @property {string} file_thumbnail_url
  * @property {number} view_count
  * @property {number} download_count
+ * @property {number} like_count
+ * @property {number} page_count
  * @property {string} category
  * @property {string[]} tags
  * @property {string} file_type
@@ -18,7 +20,7 @@
  * @property {number} id
  * @property {string} title
  * @property {"PUBLIC"|"PRIVATE"} visibility
- * @property {"PROCESSING"|"COMPLETED"|"FAILED"} status
+ * @property {"PROCESSING"|"READY"|"DELETED"|"BANNED"} status
  * @property {string} owner
  * @property {string} file_thumbnail_url
  * @property {number} view_count

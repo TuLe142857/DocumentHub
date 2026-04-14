@@ -1,7 +1,7 @@
 import { Outlet, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import Loading from '@/components/Loading.jsx';
-import ForbiddenPage from '@/pages/ForbiddenPage.jsx';
+import ForbiddenPage from '@/pages/errors/ForbiddenPage.jsx';
 
 export default function ProtectedRoute({ allowedRoles }) {
   const { user, isLoading, isAuthenticated } = useSelector(
@@ -13,6 +13,7 @@ export default function ProtectedRoute({ allowedRoles }) {
   }
 
   if (!isAuthenticated) {
+    alert('Required Authentication');
     return <Navigate to={'/login'} />;
   }
 

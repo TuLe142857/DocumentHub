@@ -1,10 +1,13 @@
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, Query
 
 from app.core import APIResponse, ResponseSuccessSchema
 from app.schemas.document_schema import DocumentSummaryResponse
-from app.schemas.recommendation_schema import SimilarQueryDep, TrendingQueryDep
+from app.schemas.recommendation_schema import SimilarQuery, TrendingQuery
 from app.services.auth_service import OptionalCurrentUserDep
 from app.services.recommendation_service import RecommendationServiceDep
+from app.services.storage_service import StorageServiceDep
 
 router = APIRouter(prefix="/recommendation", tags=["Recommendation"])
 
@@ -21,14 +24,20 @@ def get_personalized_recommendation(current_user: OptionalCurrentUserDep):
 )
 def recommend_trending(
     current_user: OptionalCurrentUserDep,
-    query: TrendingQueryDep,
+    query: Annotated[TrendingQuery, Query()],
     recommender: RecommendationServiceDep,
+    storage_service: StorageServiceDep,
 ):
     doc_list = recommender.get_trending(
         category_id=query.category_id, timeframe=query.timeframe, limit=query.limit
     )
 
-    res_data = [DocumentSummaryResponse.model_validate(doc) for doc in doc_list]
+    res_data = [
+        DocumentSummaryResponse.build(
+            doc, storage_service.generate_presigned_url_for_document(doc)[0]
+        )
+        for doc in doc_list
+    ]
     return APIResponse.ok(res_data)
 
 
@@ -37,6 +46,8 @@ def recommend_trending(
     response_model=ResponseSuccessSchema[list[DocumentSummaryResponse]],
 )
 def recommend_similar(
-    document_id: int, current_user: OptionalCurrentUserDep, query: SimilarQueryDep
+    document_id: int,
+    current_user: OptionalCurrentUserDep,
+    query: Annotated[SimilarQuery, Query()],
 ):
     return APIResponse.ok([])

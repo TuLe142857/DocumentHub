@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Form, Path, Query
+from fastapi import APIRouter, Body, Form, Query
 
 from app.core import (
     APIResponse,
     ResponsePaginationSchema,
     ResponseSuccessSchema,
 )
-from app.dependencies import DBSessionDep
-from app.schemas.category_schema import CategorySchema
+
+# from app.dependencies import DBSessionDep
+# from app.schemas.category_schema import CategorySchema
 from app.schemas.document_schema import *
 from app.services.auth_service import (
     AuthServiceDep,
@@ -39,22 +40,6 @@ def get_supported_types():
 def get_max_supported_document_size_bytes():
     settings = get_settings()
     return APIResponse.ok(data=settings.MAX_FILE_SIZE)
-
-
-@router.get(
-    "/categories",
-    response_model=ResponseSuccessSchema[list[CategorySchema]],
-    summary="List categories",
-    description="Returns a list of all available document categories.",
-)
-def get_categories(document_service: DocumentServiceDep, db_session: DBSessionDep):
-    from sqlalchemy import select
-
-    from app.models import Category
-
-    categories = db_session.execute(select(Category)).scalars().all()
-    res = [CategorySchema.model_validate(category) for category in categories]
-    return APIResponse.ok(data=res)
 
 
 @router.get(
@@ -198,15 +183,15 @@ def restore_document(
     return APIResponse.ok()
 
 
-@router.post(
-    "/{document_id}/tags/{tag_name}",
+@router.put(
+    "/{document_id}/tags",
     response_model=ResponseSuccessSchema,
     summary="Add tag to document",
 )
 def add_tag(
     current_user: CurrentUserDep,
     document_id: int,
-    tag_name: Annotated[str, Path()],
+    tag_name: Annotated[str, Body(embed=True)],
     document_service: DocumentServiceDep,
 ):
     document_service.add_tag_to_document(
@@ -216,14 +201,14 @@ def add_tag(
 
 
 @router.delete(
-    "/{document_id}/tags/{tag_name}",
+    "/{document_id}/tags",
     response_model=ResponseSuccessSchema,
     summary="Remove tag from document",
 )
 def remove_tag(
     current_user: CurrentUserDep,
     document_id: int,
-    tag_name: Annotated[str, Path()],
+    tag_name: Annotated[str, Body(embed=True)],
     document_service: DocumentServiceDep,
 ):
     document_service.remove_tag_from_document(
@@ -276,3 +261,20 @@ def download_document(
         user=current_user, document_id=document_id, document_format=document_type
     )
     return APIResponse.ok(data=url)
+
+
+@router.get(
+    "/{document_id}/collections",
+    response_model=ResponseSuccessSchema,
+    summary="List collections that contain specific document",
+)
+def get_collections_of_document():
+    return APIResponse.ok(message="Coming Soon")
+
+
+@router.put("/{document_id}/collections", response_model=ResponseSuccessSchema)
+def put_document_to_collections(
+    collection_ids: Annotated[list[int], Body(embed=True)],
+    current_user: CurrentUserDep,
+):
+    return APIResponse.ok(message="Coming Soon")

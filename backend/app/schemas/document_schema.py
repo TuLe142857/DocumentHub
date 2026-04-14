@@ -103,7 +103,7 @@ class DocumentSupportedTypeResponse(BaseModel):
 
 
 class DocumentQuery(PaginationQuery):
-    status: Annotated[DocumentStatus | None, Field(default=None)]
+    status: Annotated[DocumentStatus | None, Field(default=DocumentStatus.READY)]
 
 
 class DocumentSummaryResponse(BaseModel):

@@ -7,6 +7,14 @@ x-backend-default: &backend-build-default
         UID: ${UID-1000}
         GID: ${GID-1000}
   environment:
+    BACKEND_CORS_ORIGINS: >
+      "
+      http://localhost,
+      http://localhost:8000,
+      http://localhost:${FRONTEND_PORT_EXTERNAL:-5173},
+      http://localhost:${NGINX_PORT_EXTERNAL:-80},
+      "
+
     S3_ENDPOINT: http://minio:9000
     S3_PUBLIC_URL_OVERRIDE: http://localhost:${NGINX_PORT_EXTERNAL:-80}/minio
 

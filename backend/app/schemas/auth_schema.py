@@ -9,6 +9,7 @@ class SelfInfoResponse(BaseModel):
     """
 
     model_config = ConfigDict(from_attributes=True, extra="ignore")
+    avatar_url: Annotated[str | None, Field(default=None)]
     role: Annotated[str, Field(validation_alias="role_name")]
     username: Annotated[str, Field()]
     email: Annotated[str, Field()]
