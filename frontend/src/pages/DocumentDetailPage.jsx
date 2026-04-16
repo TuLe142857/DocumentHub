@@ -1,18 +1,14 @@
 import { useParams } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
-import {
-  ThumbsUp,
-  BadgeAlert,
-  Download,
-  Bookmark,
-  Trash2,
-  Pencil,
-  Tag,
-} from 'lucide-react';
+import { ThumbsUp, BadgeAlert, Download, Bookmark, Pencil } from 'lucide-react';
+
+import DocumentEditForm from '@/components/forms/DocumentEditForm.jsx';
 
 import api from '@/api/api.js';
 import Loading from '@/components/Loading';
+import DocumentReportForm from '@/components/forms/DocumentReportForm.jsx';
+import Modal from '@/components/Modal.jsx';
 
 const DownloadButton = ({ doc }) => {
   const [open, setOpen] = useState(false);
@@ -79,11 +75,10 @@ const DownloadButton = ({ doc }) => {
 const LikeButton = ({ doc, onUpdate }) => {
   const handleLike = async () => {
     try {
-      const api_url = `/documents/${doc.id}/like`;
       if (doc.liked) {
-        await api.delete(api_url);
+        await api.delete(`/documents/${doc.id}/like`);
       } else {
-        await api.post(api_url);
+        await api.put(`/documents/${doc.id}/like`);
       }
       onUpdate((prevState) => ({
         ...prevState,
@@ -125,29 +120,45 @@ const AddToCollectionButton = ({ doc }) => {
 };
 
 const ReportButton = ({ doc }) => {
-  const handleClick = () => {
-    alert('Coming soon....');
-  };
+  const [open, setOpen] = useState(false);
   return (
-    <div>
+    <>
+      <Modal isOpen={open} onClose={() => setOpen(false)}>
+        <DocumentReportForm
+          doc={doc}
+          onCancel={() => setOpen(false)}
+          className="min-w-100 min-h-100"
+        />
+      </Modal>
       <button
         className="flex flex-row p-2  rounded-xl bg-white hover:bg-sky-200"
-        onClick={handleClick}
+        onClick={() => setOpen(!open)}
       >
         <BadgeAlert />
       </button>
-    </div>
+    </>
   );
 };
 
-const EditButton = ({ onClick }) => {
+const EditButton = ({ doc, onChange }) => {
+  const [open, setOpen] = useState(false);
+
   return (
-    <button
-      className="flex flex-row p-2  rounded-xl bg-white hover:bg-sky-200"
-      onClick={onClick}
-    >
-      <Pencil />
-    </button>
+    <>
+      <Modal isOpen={open} onClose={() => setOpen(false)}>
+        <DocumentEditForm
+          doc={doc}
+          onUpdate={onChange}
+          onCancel={() => setOpen(false)}
+        />
+      </Modal>
+      <button
+        className="flex flex-row p-2  rounded-xl bg-white hover:bg-sky-200"
+        onClick={() => setOpen(true)}
+      >
+        <Pencil />
+      </button>
+    </>
   );
 };
 
@@ -209,7 +220,9 @@ const DocumentDetailPage = () => {
               <ReportButton doc={doc} />
               {isAuthenticated &&
                 currentUser &&
-                currentUser.username === doc.owner && <EditButton />}
+                currentUser.username === doc.owner && (
+                  <EditButton doc={doc} onChange={setDoc} />
+                )}
             </div>
           </div>
 

@@ -2,6 +2,7 @@ import api from '@/api/api.js';
 import DocumentCard from '@/components/DocumentCard.jsx';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { TrendingUp } from 'lucide-react';
 
 const CategoryBar = ({ categories }) => {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ const CategoryBar = ({ categories }) => {
         categories.map((category) => (
           <div
             key={category.id}
-            className="font-bold bg-white text-sky-700 rounded-xl p-2 hover:cursor-pointer hover:bg-sky-500 hover:text-white"
+            className="font-bold bg-white text-blue-700 rounded-full p-2 hover:cursor-pointer hover:bg-sky-200"
             onClick={() =>
               navigate(`/search?category_id=${encodeURIComponent(category.id)}`)
             }
@@ -33,7 +34,11 @@ const DocumentList = ({ documents }) => {
     <div className="flex flex-row w-screen overflow-x-auto gap-2">
       {documents &&
         documents.map((document) => (
-          <DocumentCard document={document} key={document.id} />
+          <DocumentCard
+            document={document}
+            key={document.id}
+            className="border border-gray-200 hover:bg-gray-100/50"
+          />
         ))}
     </div>
   );
@@ -86,15 +91,21 @@ const HomePage = () => {
   }, [trending]);
 
   return (
-    <div className="flex flex-col w-screen bg-sky-50">
+    <div className="flex flex-col w-screen bg-white">
       <CategoryBar categories={categories} />
 
       {trending &&
         trending.map((t) => (
           <div key={t.id}>
-            <div className="text-2xl font-bold text-black p-2">
-              <span>Trending in </span>
-              <span>{t.category}</span>
+            <div className="flex flex-row gap-x-2 m-2 items-center text-2xl font-extrabold text-black">
+              <TrendingUp
+                size={48}
+                className="rounded-sm p-2 text-white bg-linear-to-tr  from-blue-700 to-cyan-200"
+              />
+              <span className="text-center">Trending in </span>
+              <span className="text-center rounded text-transparent bg-clip-text bg-linear-to-r from-blue-500 to-cyan-500">
+                {t.category}
+              </span>
             </div>
             <DocumentList documents={t.documents} key={t.id} />
           </div>

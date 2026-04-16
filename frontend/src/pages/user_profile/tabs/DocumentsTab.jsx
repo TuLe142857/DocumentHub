@@ -92,7 +92,7 @@ const DocumentsTab = ({ username }) => {
                 orientation={'horizontal'}
                 document={doc}
                 key={doc.id}
-                className="group-hover:bg-sky-100"
+                className="group-hover:bg-sky-100 bg-white border border-gray-200 mx-2"
               />
               {isAuthenticated &&
                 currentUser &&

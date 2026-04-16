@@ -1,8 +1,8 @@
 import { useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
-import { Search, Upload } from 'lucide-react';
-import logo from '@/assets/react.svg';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Search, Upload, LogIn, UserPlus, BookOpen } from 'lucide-react';
+import AppLogo from '@/components/AppLogo.jsx';
 import AvatarDropDown from '@/components/AvatarDropDown.jsx';
 
 /**
@@ -17,54 +17,60 @@ const Header = () => {
     (state) => state.user
   );
   const navigate = useNavigate();
-  if (isLoading) {
-    return <>Loading</>;
-  }
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    setSearchKeyWord(searchParams.get('q') || '');
+  }, [searchParams, location.pathname]);
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchKeyWord.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchKeyWord)}`);
+      if (location.pathname === '/search') {
+        const params = new URLSearchParams(searchParams);
+        params.set('q', searchKeyWord);
+        setSearchParams(params);
+      } else {
+        const params = new URLSearchParams(location.search);
+        params.set('q', searchKeyWord);
+        navigate(`/search?${params.toString()}`);
+      }
     }
   };
 
+  const handleChange = (e) => {
+    e.preventDefault();
+    setSearchKeyWord(e.target.value);
+  };
+
+  if (isLoading) {
+    return <>Loading</>;
+  }
+
   return (
-    <div className="flex flex-row px-10 h-20 justify-between items-center w-screen gap-1 bg-sky-300 ">
+    <div className="sticky top-0 z-9999 shadow-sm flex flex-row w-screen  px-2 sm:px-10 h-20 justify-between items-center  gap-2 bg-white ">
       {/*
           LOGO
       */}
-      <div className="flex flex-row items-center gap-2 hover:cursor-pointer">
-        <img
-          src={logo}
-          alt="Logo"
-          className="w-10 h-10 bg-white rounded-full"
-          onClick={() => navigate('/')}
-        ></img>
-        <div className="text-xl text-center text-white font-bold ">
-          DocumentHub
-        </div>
-      </div>
+
+      <AppLogo alwaysFull={false} />
 
       {/*
             SEARCH BAR
       */}
       <form
         onSubmit={handleSearch}
-        className="flex flex-row rounded bg-white w-1/2 justify-center"
+        className="group flex flex-row flex-1 gap-x-2 items-center px-2 rounded-full bg-gray-100 border border-gray-300 justify-center focus-within:outline focus-within:outline-blue-500"
       >
+        <Search className="text-gray-500 group-focus-within:text-blue-500" />
         <input
           type="text"
           value={searchKeyWord}
-          onChange={(e) => setSearchKeyWord(e.target.value)}
+          onChange={handleChange}
           placeholder="Search..."
-          className="flex flex-1 m-2 p-2 rounded-sm bg-white"
+          className="flex-1 text-lg my-1 p-1  focus:outline-none"
         />
-        <button
-          type="submit"
-          className="p-2 px-4 m-2 rounded-xl bg-sky-300 hover:bg-sky-500"
-        >
-          <Search className="text-white" />
-        </button>
       </form>
 
       {/*
@@ -73,28 +79,30 @@ const Header = () => {
       {isAuthenticated && (
         <div className="flex flex-row items-center gap-2">
           <button
-            className="flex flex-row bg-white p-2 px-4 m-2 rounded-xl shadow-sm hover:bg-sky-500 hover:text-white"
+            className="hidden sm:flex sm:flex-row py-2 px-4 m-2  rounded-full text-white bg-blue-500 border hover:bg-blue-700"
             onClick={() => navigate('/upload')}
           >
             <Upload />
-            <div>Upload</div>
+            <div className="hidden md:block">Upload</div>
           </button>
-          <AvatarDropDown user={user} />
+          <AvatarDropDown user={user} className="min-w-10 min-h-10 " />
         </div>
       )}
       {!isAuthenticated && (
         <div className="flex flex-row">
           <button
             onClick={() => navigate('/login')}
-            className="bg-white p-2 m-2 rounded-xl shadow-sm hover:bg-sky-500 hover:text-white"
+            className="flex gap-x-1 p-2 m-2 rounded-lg text-blue-500 bg-sky-100/50 border border-blue-300/50 hover:bg-sky-200/50"
           >
-            Login
+            <div className="hidden md:block">Login</div>
+            <LogIn />
           </button>
           <button
-            className="bg-white p-2 m-2 rounded-xl shadow-sm hover:bg-sky-500 hover:text-white"
+            className="flex gap-x-1 p-2 m-2 rounded-xl text-white bg-blue-500 hover:bg-blue-600"
             onClick={() => navigate('/register')}
           >
-            Register
+            <div className="hidden md:block">Register</div>
+            <UserPlus />
           </button>
         </div>
       )}

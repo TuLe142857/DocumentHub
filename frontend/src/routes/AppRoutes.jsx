@@ -23,7 +23,7 @@ const AppRoutes = () => {
       <Route path="login" element={<LoginPage />} />
       <Route path="register" element={<RegisterPage />} />
       <Route path="forgot-password" element={<ForgotPasswordPage />} />
-
+      <Route path="users/:username" element={<UserProfilePage />} />
       {/*
           USER PAGES
           - Required login
@@ -36,7 +36,6 @@ const AppRoutes = () => {
         <Route index={true} element={<HomePage />} />
         <Route path="search" element={<SearchPage />} />
         <Route path="documents/:id" element={<DocumentDetailPage />} />
-        <Route path="users/:username" element={<UserProfilePage />} />
 
         <Route element={<ProtectedRoute allowedRoles={['USER']} />}>
           <Route path="upload" element={<UploadDocumentPage />} />

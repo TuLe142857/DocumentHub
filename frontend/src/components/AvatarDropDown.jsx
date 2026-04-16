@@ -1,6 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { LogOut, UserPen, User, Upload, Bookmark } from 'lucide-react';
+import {
+  LogOut as LogOutIcon,
+  UserPen as ProfileIcon,
+  User as UserIcon,
+  FileText as DocumentIcon,
+  Library as CollectionIcon,
+  Upload as UploadIcon,
+} from 'lucide-react';
 
 import avatar from '@/assets/avatar.jpg';
 import { useDispatch } from 'react-redux';
@@ -23,7 +30,7 @@ const Separator = () => {
   return <hr className="border-gray-300 my-2 w-full" />;
 };
 
-const AvatarDropDown = ({ user }) => {
+const AvatarDropDown = ({ user, className = '' }) => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const dispatch = useDispatch();
@@ -54,42 +61,47 @@ const AvatarDropDown = ({ user }) => {
   };
 
   return (
-    <div ref={modalRef} className="relative">
+    <div ref={modalRef} className={`relative ${className}`}>
       <img
         src={user?.avatar_url || avatar}
         alt="avatar"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-10 h-10 bg-white rounded-full"
+        className="w-10 h-10 bg-white rounded-full object-cover border border-gray-300"
       ></img>
       {isOpen && (
-        <div className="absolute right-0 mt-2 p-2 flex flex-col items-start bg-white rounded-xl shadow-2xl">
+        <div className="absolute right-0 mt-2 p-2 flex flex-col items-start bg-white rounded-xl shadow-2xl border border-gray-200">
           <MenuItem
             className="font-bold"
             name={user.username}
-            icon={<User />}
+            icon={<UserIcon />}
             onClick={() => navigate(`/users/${user.username}`)}
           />
           <Separator />
           <MenuItem
             name="Profile"
-            icon={<UserPen />}
+            icon={<ProfileIcon />}
             onClick={() => navigate(`/users/${user.username}?tab=overview`)}
           />
           <MenuItem
             name="My Collections"
-            icon={<Bookmark />}
+            icon={<CollectionIcon />}
             onClick={() => navigate(`/users/${user.username}?tab=collections`)}
           />
           <MenuItem
             name="My Documents"
-            icon={<Upload />}
+            icon={<DocumentIcon />}
             onClick={() => navigate(`/users/${user.username}?tab=documents`)}
+          />
+          <MenuItem
+            name="Upload"
+            icon={<UploadIcon />}
+            onClick={() => navigate(`/upload`)}
           />
           <Separator />
           <MenuItem
             className="text-red-500"
             name="Logout"
-            icon={<LogOut />}
+            icon={<LogOutIcon />}
             onClick={handleLogout}
           />
         </div>

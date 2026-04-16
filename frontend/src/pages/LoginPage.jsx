@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
+import { toast } from 'react-toastify';
 import { fetchUserInfo } from '@/store/slice/userSlice.jsx';
-import api from '@/api/api.js';
+import authApi from "@/api/authApi.js";
+import AppLogo from '@/components/AppLogo.jsx';
 
 const LoginPage = () => {
   const dispatch = useDispatch(); // redux
@@ -17,7 +19,6 @@ const LoginPage = () => {
     password: searchParams.get('password'),
   });
   const [showPassword, setShowPassword] = useState(false);
-
   const handleChange = (e) => {
     setLoginData({ ...loginData, [e.target.name]: e.target.value });
   };
@@ -27,12 +28,12 @@ const LoginPage = () => {
     setLoading(true);
     setError(null);
     try {
-      await api.post('/auth/login', loginData);
-
-      // fetch user data to redux
+      await authApi.login(loginData);
       dispatch(fetchUserInfo());
-      alert('Login successfully');
-      navigate('/');
+      toast.success('Login successful!', {
+        autoClose: 2000,
+      });
+      setTimeout(() => navigate('/'), 500);
     } catch (err) {
       setError(err.response.data?.message);
     } finally {
@@ -43,7 +44,7 @@ const LoginPage = () => {
   return (
     <div className="flex flex-col items-center justify-center h-screen w-screen bg-sky-100">
       <div className="flex flex-col items-center justify-center p-5 bg-white rounded-xl">
-        <div className="font-bold text-xl">Login</div>
+        <AppLogo alwaysFull={true} />
         {error && <div className="text-red-500">{error}</div>}
         <form onSubmit={handleLogin} className="flex flex-col h-full">
           <input
