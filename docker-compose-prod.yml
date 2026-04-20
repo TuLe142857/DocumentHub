@@ -21,11 +21,6 @@ services:
       MINIO_DOMAIN: ${MINIO_DOMAIN:?Variable is not set or empty}
     volumes:
       - ./docker/nginx/templates/prod.conf.template:/etc/nginx/templates/default.conf.template
-    depends_on:
-      backend:
-        condition: service_healthy
-      frontend:
-        condition: service_started
 
   cloudflare:
     image: cloudflare/cloudflared:latest

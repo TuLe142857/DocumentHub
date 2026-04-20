@@ -13,7 +13,7 @@ class StorageService:
     def __init__(self, s3_client: S3Client):
         self.s3_client = s3_client
 
-    def generate_s3_presigned_url(
+    def _generate_s3_presigned_url(
         self,
         bucket: str,
         key: str,
@@ -42,44 +42,52 @@ class StorageService:
         else:
             return url
 
-    def generate_presigned_url_for_document(
-        self, document: Document
-    ) -> tuple[str, str, str]:
+    def generate_document_url(self, document: Document) -> tuple[str, str, str]:
         """
         Args:
-            document: Document to generate presigned url
-        Returns: tuple[thumbnail_url, preview_url, original_url]
+            document: Document selected
+        Returns:
+            tuple[thumbnail_url, preview_url, original_url]
+
+            - thumbnail_url: thumbnail image(image of document's first page)
+            - preview_url: preview version(format: PDF)
+            - original_url: original version(format: original format)
         """
         settings = get_settings()
         bucket = settings.S3_DOCUMENTS_BUCKET
         base_url = settings.S3_PUBLIC_URL_OVERRIDE
-        thumbnail_url = self.generate_s3_presigned_url(
+        thumbnail_url = self._generate_s3_presigned_url(
             bucket, document.thumbnail_object_key, base_url=base_url
         )
-        preview_url = self.generate_s3_presigned_url(
+        preview_url = self._generate_s3_presigned_url(
             bucket,
             document.file_preview_object_key,
             response_content_type="Application/pdf",
             base_url=base_url,
         )
-        original_url = self.generate_s3_presigned_url(
+        original_url = self._generate_s3_presigned_url(
             bucket,
             document.file_object_key,
             base_url=base_url,
         )
         return thumbnail_url, preview_url, original_url
 
-    def generate_download_url_for_document(self, document: Document) -> tuple[str, str]:
+    def generate_download_url(self, document: Document) -> tuple[str, str]:
         """
+        Generate document download url
+        Args:
+            document: Document selected to download
+        Returns:
+            tuple(original_url, pdf_url)
 
-        Returns: tuple(original_url, pdf_url)
-
+            - original_url: original version(format: PDF)
+            - pdf_url: preview version(format: original format)
         """
         settings = get_settings()
         bucket = settings.S3_DOCUMENTS_BUCKET
         base_url = settings.S3_PUBLIC_URL_OVERRIDE
 
-        original_url = self.generate_s3_presigned_url(
+        original_url = self._generate_s3_presigned_url(
             bucket=bucket,
             key=document.file_object_key,
             base_url=base_url,
@@ -88,7 +96,7 @@ class StorageService:
             },
         )
 
-        pdf_url = self.generate_s3_presigned_url(
+        pdf_url = self._generate_s3_presigned_url(
             bucket=bucket,
             key=document.file_preview_object_key,
             base_url=base_url,
@@ -99,6 +107,23 @@ class StorageService:
         )
 
         return original_url, pdf_url
+
+    def generate_image_url(self, key: str):
+        """
+
+        Args:
+            key: S3 object key
+
+        Returns:
+            url
+        """
+        settings = get_settings()
+        bucket = settings.S3_IMAGES_BUCKET
+        base_url = settings.S3_PUBLIC_URL_OVERRIDE
+
+        return self._generate_s3_presigned_url(
+            bucket=bucket, key=key, expires_in=24 * 60 * 60, base_url=base_url
+        )
 
 
 def get_storage_service(s3_client: S3Dep) -> StorageService:

@@ -1,3 +1,8 @@
+"""
+routes module doc string
+
+"""
+
 from fastapi import APIRouter, FastAPI
 
 from app.core import get_settings

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
 import { fetchUserInfo } from '@/store/slice/userSlice.jsx';
-import authApi from "@/api/authApi.js";
+import authApi from '@/api/authApi.js';
 import AppLogo from '@/components/AppLogo.jsx';
 
 const LoginPage = () => {

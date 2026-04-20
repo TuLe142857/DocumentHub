@@ -4,33 +4,38 @@ from fastapi import APIRouter, Form, Query
 
 from app.core import (
     APIResponse,
-    PaginationQueryDep,
     ResponsePaginationSchema,
     ResponseSuccessSchema,
 )
-from app.schemas.collection_schema import CollectionSummaryResponse
-from app.schemas.document_schema import DocumentQuery, DocumentSummaryResponse
-from app.schemas.user_profile_schema import (
-    AvatarUpdateRequest,
-    UserProfileResponse,
-    UserProfileUpdateRequest,
+from app.schemas.collection_schema import CollectionQuery, CollectionSchema
+from app.schemas.document_schema import (
+    DocumentOwnerQuery,
+    DocumentPublicQuery,
+    DocumentSummarySchema,
 )
-from app.services.auth_service import CurrentUserDep, OptionalCurrentUserDep
+from app.schemas.user_schema import (
+    AvatarUpdateRequest,
+    UserProfileUpdateRequest,
+    UserPublicProfileSchema,
+)
+from app.services.auth_service import CurrentUserDep
 from app.services.collection_service import CollectionServiceDep
 from app.services.document_service import DocumentServiceDep
 from app.services.storage_service import StorageServiceDep
 from app.services.user_service import UserServiceDep
 
-router = APIRouter(prefix="/users", tags=["UserProfile"])
+router = APIRouter(prefix="/users", tags=["User"])
 
 
-@router.get("/me/profile", response_model=ResponseSuccessSchema[UserProfileResponse])
+@router.get(
+    "/me/profile", response_model=ResponseSuccessSchema[UserPublicProfileSchema]
+)
 def get_self_profile(
     current_user: CurrentUserDep,
     user_service: UserServiceDep,
 ):
     profile = user_service.get_profile_by_id(current_user.id)
-    res = UserProfileResponse.model_validate(profile)
+    res = UserPublicProfileSchema.model_validate(profile)
     return APIResponse.ok(data=res)
 
 
@@ -58,24 +63,20 @@ def update_avatar(
 
 
 @router.get(
-    "/me/documents", response_model=ResponsePaginationSchema[DocumentSummaryResponse]
+    "/me/documents", response_model=ResponsePaginationSchema[DocumentSummarySchema]
 )
 def get_self_documents(
     current_user: CurrentUserDep,
-    query: Annotated[DocumentQuery, Query()],
+    query: Annotated[DocumentOwnerQuery, Query()],
     document_service: DocumentServiceDep,
     storage_service: StorageServiceDep,
 ):
-    docs, total = document_service.list_self_documents(
-        owner_id=current_user.id,
-        page=query.page,
-        limit=query.limit,
-        status=query.status,
+    docs, total = document_service.get_my_documents(
+        user_id=current_user.id, **query.model_dump(exclude_none=True)
     )
+
     res_data = [
-        DocumentSummaryResponse.build(
-            doc, storage_service.generate_presigned_url_for_document(doc)[0]
-        )
+        DocumentSummarySchema.build(doc, storage_service.generate_document_url(doc)[0])
         for doc in docs
     ]
     return APIResponse.paginate(
@@ -88,21 +89,22 @@ def get_self_documents(
 
 @router.get(
     "/me/collections",
-    response_model=ResponsePaginationSchema[CollectionSummaryResponse],
+    response_model=ResponsePaginationSchema[CollectionSchema],
 )
 def get_self_collections(
     current_user: CurrentUserDep,
-    query: PaginationQueryDep,
+    query: Annotated[CollectionQuery, Query()],
     collection_service: CollectionServiceDep,
 ):
     collections, total = collection_service.list_collection(
         owner_id=current_user.id,
+        keyword=query.q,
+        document_id=query.document_id,
         page=query.page,
         limit=query.limit,
     )
     res_data = [
-        CollectionSummaryResponse.model_validate(collection)
-        for collection in collections
+        CollectionSchema.model_validate(collection) for collection in collections
     ]
     return APIResponse.paginate(
         current_page=query.page,
@@ -113,43 +115,35 @@ def get_self_collections(
 
 
 @router.get(
-    "/{username}/profile", response_model=ResponseSuccessSchema[UserProfileResponse]
+    "/{username}/profile", response_model=ResponseSuccessSchema[UserPublicProfileSchema]
 )
 def get_userprofile(
     username: str,
     user_service: UserServiceDep,
 ):
     profile = user_service.get_profile_by_name(username)
-    res = UserProfileResponse.model_validate(profile)
+    res = UserPublicProfileSchema.model_validate(profile)
     return APIResponse.ok(data=res)
 
 
 @router.get(
     "/{username}/documents",
-    response_model=ResponsePaginationSchema[DocumentSummaryResponse],
+    response_model=ResponsePaginationSchema[DocumentSummarySchema],
+    summary="Select other user's Public && Active documents",
 )
 def get_user_documents(
     username: str,
-    pagination: PaginationQueryDep,
-    current_user: OptionalCurrentUserDep,
+    query: Annotated[DocumentPublicQuery, Query()],
     document_service: DocumentServiceDep,
 ):
-    if current_user is None:
-        doc_list, total = document_service.list_public_document(
-            owner=username, page=pagination.page, limit=pagination.limit
-        )
-    else:
-        doc_list, total = document_service.get_document_list(
-            owner=username,
-            viewer=current_user.id,
-            page=pagination.page,
-            limit=pagination.limit,
-        )
+    docs, total = document_service.get_public_documents(
+        owner_name=username, **query.model_dump(exclude_none=True)
+    )
 
-    res_data = [DocumentSummaryResponse.model_validate(doc) for doc in doc_list]
+    res_data = [DocumentSummarySchema.model_validate(doc) for doc in docs]
     return APIResponse.paginate(
-        current_page=pagination.page,
-        per_page=pagination.limit,
+        current_page=query.page,
+        per_page=query.limit,
         total_items=total,
         data=res_data,
     )

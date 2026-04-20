@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
-import api from '@/api/api.js';
+import authApi from '@/api/authApi.js';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 const RegisterPage = () => {
-  // Step 1: provide email => send to server => server send otp to email
-  // Step 2: verify otp => get registration code
-  // Step 3: use registration code to complete registration
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -30,9 +28,7 @@ const RegisterPage = () => {
     setError(null);
     setLoading(true);
     try {
-      const response = await api.post('auth/register/request', {
-        email: formData.email,
-      });
+      const response = await authApi.requestRegister({ email: formData.email });
       console.log(response.data);
       setStep(2);
     } catch (err) {
@@ -50,10 +46,11 @@ const RegisterPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.post('auth/register/verify', {
+      const payload = {
         email: formData.email,
         otp_code: formData.otp_code,
-      });
+      };
+      const response = await authApi.verifyRegister(payload);
       setFormData({
         ...formData,
         registration_code: response.data.data.registration_code,
@@ -74,14 +71,15 @@ const RegisterPage = () => {
     setLoading(true);
     setError(null);
     try {
-      await api.post('auth/register/complete', {
+      const payload = {
         email: formData.email,
         username: formData.username,
         password: formData.password,
         registration_code: formData.registration_code,
-      });
-      alert('Register successfully');
-      navigate('/login');
+      };
+      await authApi.completeRegister(payload);
+      toast.success('Register successfully', { autoClose: 2000 });
+      setTimeout(() => navigate(`/login?identity=${formData.username}`), 500);
     } catch (err) {
       setError(
         err?.response?.data?.message || 'Something went wrong, please try again'

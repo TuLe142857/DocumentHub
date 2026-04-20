@@ -8,11 +8,12 @@ import {
   Library as CollectionIcon,
   Upload as UploadIcon,
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 import avatar from '@/assets/avatar.jpg';
 import { useDispatch } from 'react-redux';
 import { logout } from '@/store/slice/userSlice.jsx';
-import api from '@/api/api.js';
+import authApi from '@/api/authApi.js';
 
 const MenuItem = ({ name, icon, onClick, className }) => {
   return (
@@ -30,7 +31,7 @@ const Separator = () => {
   return <hr className="border-gray-300 my-2 w-full" />;
 };
 
-const AvatarDropDown = ({ user, className = '' }) => {
+const AvatarDropDown = ({ user, className = 'w-15 h-15' }) => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const dispatch = useDispatch();
@@ -51,12 +52,14 @@ const AvatarDropDown = ({ user, className = '' }) => {
   const handleLogout = async () => {
     try {
       if (confirm('Are you sure you want to logout?')) {
-        await api.post('/auth/logout');
+        await authApi.logout();
         dispatch(logout());
         navigate('/login');
       }
-    } catch {
-      alert('Error logging out');
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message || err?.message || 'Something went wrong.';
+      toast.error(`Error logging out: ${msg}`);
     }
   };
 
@@ -66,7 +69,7 @@ const AvatarDropDown = ({ user, className = '' }) => {
         src={user?.avatar_url || avatar}
         alt="avatar"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-10 h-10 bg-white rounded-full object-cover border border-gray-300"
+        className="w-full h-ful bg-white rounded-full object-cover border border-gray-300"
       ></img>
       {isOpen && (
         <div className="absolute right-0 mt-2 p-2 flex flex-col items-start bg-white rounded-xl shadow-2xl border border-gray-200">

@@ -88,7 +88,7 @@ class Document(ORMBase):
         secondary="document_tags", back_populates="documents"
     )
     collection_items: Mapped[List["CollectionItem"]] = relationship(
-        back_populates="document"
+        back_populates="document", cascade="all, delete-orphan"
     )
     reports: Mapped[list["DocumentReport"]] = relationship(back_populates="document")
 

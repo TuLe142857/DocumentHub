@@ -3,7 +3,7 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
-class SelfInfoResponse(BaseModel):
+class MeResponse(BaseModel):
     """
     /api/auth/whoami
     """
@@ -15,7 +15,7 @@ class SelfInfoResponse(BaseModel):
     email: Annotated[str, Field()]
 
 
-class RegistrationRequest(BaseModel):
+class RegisterRequest(BaseModel):
     """
     /api/auth/register/request
     """
@@ -25,15 +25,7 @@ class RegistrationRequest(BaseModel):
     email: Annotated[str, EmailStr]
 
 
-class VerifyRegistrationResponse(BaseModel):
-    """
-    /api/auth/register/verify
-    """
-
-    registration_code: Annotated[str, Field()]
-
-
-class VerifyRegistrationRequest(BaseModel):
+class RegisterVerifyRequest(BaseModel):
     """
     /api/auth/register/verify
     """
@@ -44,7 +36,16 @@ class VerifyRegistrationRequest(BaseModel):
     otp_code: Annotated[str, Field()]
 
 
-class CompleteRegistrationRequest(BaseModel):
+class RegisterVerifyResponse(BaseModel):
+    """
+    /api/auth/register/verify
+    """
+
+    model_config = ConfigDict(extra="ignore")
+    registration_code: Annotated[str, Field()]
+
+
+class RegisterCompleteRequest(BaseModel):
     """
     /api/auth/register/complete
     """
@@ -73,7 +74,7 @@ class LoginResponse(BaseModel):
     refresh_token: Annotated[str, Field()]
 
 
-class ForgotPasswordRequest(BaseModel):
+class PasswordForgotRequest(BaseModel):
     """
     /api/auth/forgot_password
     """
@@ -83,7 +84,7 @@ class ForgotPasswordRequest(BaseModel):
     identity: Annotated[str, Field(description="username or email")]
 
 
-class ResetPasswordRequest(BaseModel):
+class PasswordResetRequest(BaseModel):
     """
     /api/auth/reset_password
     """

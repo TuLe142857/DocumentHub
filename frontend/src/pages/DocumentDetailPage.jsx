@@ -9,6 +9,7 @@ import api from '@/api/api.js';
 import Loading from '@/components/Loading';
 import DocumentReportForm from '@/components/forms/DocumentReportForm.jsx';
 import Modal from '@/components/Modal.jsx';
+import AddDocumentToCollectionForm from '@/components/forms/AddDocumentToCollectionForm.jsx';
 
 const DownloadButton = ({ doc }) => {
   const [open, setOpen] = useState(false);
@@ -104,17 +105,21 @@ const LikeButton = ({ doc, onUpdate }) => {
 };
 
 const AddToCollectionButton = ({ doc }) => {
+  const [open, setOpen] = useState(false);
   const handleClick = () => {
     alert('Coming soon....');
   };
   return (
-    <div>
+    <div className="relative flex flex-col">
       <button
-        className="flex flex-row p-2  rounded-xl bg-white hover:bg-sky-200"
-        onClick={handleClick}
+        className=" flex flex-row p-2 rounded-xl bg-white hover:bg-sky-200"
+        onClick={() => setOpen(!open)}
       >
         <Bookmark />
       </button>
+      <Modal isOpen={open} onClose={() => setOpen(false)}>
+        <AddDocumentToCollectionForm doc={doc} onExit={() => setOpen(false)} />
+      </Modal>
     </div>
   );
 };

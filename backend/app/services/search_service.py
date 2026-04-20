@@ -21,7 +21,7 @@ class SearchService:
 
     def search_documents(
         self,
-        keywords: str,
+        keyword: str | None = None,
         category_id: int | None = None,
         tags: Sequence[str] = None,
         page=1,
@@ -34,8 +34,11 @@ class SearchService:
         stmt = select(Document).where(
             Document.visibility == DocumentVisibility.PUBLIC,
             Document.status == DocumentStatus.READY,
-            Document.title.like(f"%{keywords}%"),
         )
+
+        keywords = keyword.strip() if keyword else None
+        if keywords is not None and len(keywords) > 0:
+            stmt = stmt.where(Document.title.like(f"%{keywords}%"))
 
         if category_id:
             stmt = stmt.where(Document.category_id == category_id)
@@ -66,26 +69,6 @@ class SearchService:
             .all()
         )
         return res, total_count
-
-    def search_documents_with_personalization(
-        self,
-        user: User,
-        keywords: str,
-        category_id: int | None = None,
-        tags: Sequence[str] = None,
-        page=1,
-        limit: int = 20,
-    ) -> tuple[Sequence[Document], int]:
-        """
-        Coming soon :)
-        """
-        return self.search_documents(
-            keywords=keywords,
-            category_id=category_id,
-            tags=tags,
-            page=page,
-            limit=limit,
-        )
 
 
 def get_search_service(

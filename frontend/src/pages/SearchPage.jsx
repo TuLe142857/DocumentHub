@@ -81,10 +81,6 @@ const ActiveFilters = ({
 
 const SearchPage = () => {
   const [searchParams] = useSearchParams();
-  const query = useState({
-    keyword: searchParams.get('q') || '',
-    category_id: searchParams.get('category_id'),
-  });
 
   const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -121,7 +117,7 @@ const SearchPage = () => {
         setError(null);
 
         const params = new URLSearchParams();
-        params.set('keywords', searchParams.get('q') || '');
+        params.set('q', searchParams.get('q') || '');
         if (searchParams.has('category_id')) {
           params.set('category_id', searchParams.get('category_id'));
         }

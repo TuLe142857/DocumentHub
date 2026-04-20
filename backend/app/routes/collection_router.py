@@ -1,41 +1,16 @@
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, Query
 
 from app.core import (
     APIResponse,
-    PaginationQueryDep,
     ResponsePaginationSchema,
     ResponseSuccessSchema,
 )
 from app.schemas.collection_schema import *
-from app.schemas.document_schema import DocumentSummaryResponse
+from app.schemas.document_schema import DocumentSummarySchema
 from app.services.auth_service import CurrentUserDep
 from app.services.collection_service import CollectionServiceDep
 
-router = APIRouter(prefix="/collections", tags=["Collection"])
-
-
-@router.get(
-    "",
-    response_model=ResponsePaginationSchema[str],
-    summary="Get all collections of current user",
-)
-def get_collection_list(
-    current_user: CurrentUserDep,
-    pagination: PaginationQueryDep,
-    collection_service: CollectionServiceDep,
-):
-    collections, total = collection_service.list_collection(
-        owner_id=current_user.id,
-        page=pagination.page,
-        limit=pagination.limit,
-    )
-    res = [CollectionSummaryResponse.model_validate(obj) for obj in collections]
-    return APIResponse.paginate(
-        current_page=pagination.page,
-        per_page=pagination.limit,
-        total_items=total,
-        data=res,
-    )
+router = APIRouter(prefix="/collections", tags=["Collections"])
 
 
 @router.post("", response_model=ResponseSuccessSchema)
@@ -50,25 +25,26 @@ def create_collection(
 
 @router.get(
     "/{collection_id}/items",
-    response_model=ResponsePaginationSchema[DocumentSummaryResponse],
+    response_model=ResponsePaginationSchema[DocumentSummarySchema],
     summary="Get documents in collection",
 )
 def get_documents_in_collection(
     current_user: CurrentUserDep,
     collection_id: int,
     collection_service: CollectionServiceDep,
-    pagination: PaginationQueryDep,
+    query: Annotated[CollectionItemQuery, Query()],
 ):
     documents, total = collection_service.list_document(
         user=current_user,
         collection_id=int(collection_id),
-        page=pagination.page,
-        limit=pagination.limit,
+        keyword=query.q,
+        page=query.page,
+        limit=query.limit,
     )
-    res = [DocumentSummaryResponse.model_validate(obj) for obj in documents]
+    res = [DocumentSummarySchema.model_validate(obj) for obj in documents]
     return APIResponse.paginate(
-        current_page=pagination.page,
-        per_page=pagination.limit,
+        current_page=query.page,
+        per_page=query.limit,
         total_items=total,
         data=res,
     )

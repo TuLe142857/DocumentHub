@@ -27,11 +27,52 @@ class CollectionService:
         self.db_session = db_session
 
     def list_collection(
-        self, owner_id: int, page: int = 1, limit: int = 10
+        self,
+        owner_id: int,
+        keyword: str | None = None,
+        document_id: int = None,
+        page: int = 1,
+        limit: int = 10,
     ) -> tuple[Sequence[Collection], int]:
-        return self.crud_collection.get_multi(
-            Collection.owner_id == owner_id, skip=(page - 1) * limit, limit=limit
+        """
+
+        Args:
+            owner_id:
+            keyword:
+            document_id: collection must contain this item
+            page:
+            limit:
+
+        Returns:
+
+        """
+        # where_clauses = [Collection.owner_id == owner_id]
+        # if keyword is not None:
+        #     where_clauses.append(Collection.name.ilike(f"%{keyword.strip()}%"))
+        # return self.crud_collection.get_multi(
+        #     *where_clauses, skip=(page - 1) * limit, limit=limit
+        # )
+
+        stmt = select(Collection).where(Collection.owner_id == owner_id)
+        if keyword is not None:
+            stmt = stmt.where(Collection.name.ilike(f"%{keyword.strip()}%"))
+        if document_id is not None:
+            stmt = stmt.join(CollectionItem).where(
+                CollectionItem.document_id == document_id
+            )
+
+        total = (
+            self.db_session.execute(
+                select(func.count()).select_from(stmt.subquery())
+            ).scalar()
+            or 0
         )
+        if total == 0:
+            return list(), total
+
+        stmt = stmt.offset((page - 1) * limit).limit(limit)
+        res = self.db_session.execute(stmt).scalars().all()
+        return res, total
 
     def create_collection(self, owner_id: int, name: str):
         if self.crud_collection.select(owner_id=owner_id, name=name) is not None:
@@ -44,6 +85,7 @@ class CollectionService:
         self,
         user: User,
         collection_id: int,
+        keyword: str | None = None,
         page: int = 1,
         limit: int = 10,
     ) -> tuple[Sequence[Document], int]:
@@ -54,7 +96,7 @@ class CollectionService:
             ),
         )
 
-        err = self.access_control.can_view_collection(user, collection)
+        err = self.access_control.can_access_collection(user, collection)
         if err is not None:
             raise err
 
@@ -63,6 +105,8 @@ class CollectionService:
             .join(CollectionItem)
             .where(CollectionItem.collection_id == collection_id)
         )
+        if keyword is not None:
+            stmt = stmt.where(Document.title.ilike(f"%{keyword.strip()}%"))
 
         count = (
             self.db_session.execute(
@@ -70,6 +114,7 @@ class CollectionService:
             ).scalar()
             or 0
         )
+
         if count == 0:
             return [], count
 
@@ -105,10 +150,56 @@ class CollectionService:
             ),
         )
 
-        err = self.access_control.can_update_collection(user, collection)
+        document = self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
+
+        err = self.access_control.can_update_collection(
+            user, collection
+        ) and self.access_control.can_access_document(user, document)
         if err is not None:
             raise err
+
         self.crud_collection.add_document(collection, document_id)
+
+    def sync_document_collections(
+        self, user: User, document_id, collection_ids: list[int]
+    ):
+        collections = [
+            self.crud_collection.get(
+                collection_id,
+                on_not_found=AppException(
+                    ErrorCode.RESOURCE_NOT_FOUND, "Collection not found"
+                ),
+            )
+            for collection_id in collection_ids
+        ]
+
+        document = self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
+
+        # check permission
+        err = self.access_control.can_access_document(user, document)
+        if err:
+            raise err
+
+        for collection in collections:
+            err = self.access_control.can_update_collection(user, collection)
+            if err:
+                raise err
+
+        document.collection_items = []
+        document.collection_items = [
+            CollectionItem(collection_id=c.id) for c in collections
+        ]
+        self.db_session.flush()
 
     def remove_document_from_collection(
         self, user: User, collection_id: int, document_id: int

@@ -5,7 +5,7 @@ import uuid
 from fastapi import Depends
 from mypy_boto3_s3 import S3Client
 from redis import Redis
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode, get_settings
@@ -13,6 +13,7 @@ from app.crud.document import CRUDDocument, CRUDDocumentDep
 from app.crud.user import CRUDUser, CRUDUserDep
 from app.dependencies import DBSessionDep, RedisDep, S3Dep
 from app.models import *
+from app.models.document import document_tags_table
 from app.services.access_control_service import (
     AccessControlService,
     AccessControlServiceDep,
@@ -42,76 +43,220 @@ class DocumentService:
         self.redis_client = redis_client
         self.s3_client = s3_client
 
-    def list_self_documents(
-        self, owner_id: int, page: int, limit: int, status: DocumentStatus | None = None
-    ) -> tuple[Sequence[Document], int]:
-        skip = (page - 1) * limit
-        if status is None:
-            return self.crud_doc.get_multi(
-                Document.owner_id == owner_id,
-                skip=skip,
-                limit=limit,
+    SORT_FIELD_MAP = {
+        "title": Document.title,
+        "view": Document.view_count,
+        "like": Document.like_count,
+        "download": Document.download_count,
+        "created_at": Document.created_at,
+        "updated_at": Document.updated_at,
+    }
+
+    def _parse_sort(self, s: str, raise_on_validate: bool = True):
+        options = [_.strip() for _ in s.split(",")]
+        sort_clauses = []
+        for option in options:
+            if not option:
+                continue
+
+            if option.startswith("-"):
+                field = option[1:]
+                direction = "desc"
+            elif option.startswith("+"):
+                field = option[1:]
+                direction = "asc"
+            else:
+                field = option
+                direction = "asc"  # default sort asc
+
+            column = self.SORT_FIELD_MAP.get(field)
+            if not column:
+                if raise_on_validate:
+                    msg = (
+                        f"Invalid sort option '{option}' in '{s}'. "
+                        f"Available options: {[key for key in self.SORT_FIELD_MAP]}. "
+                        "Use '-' prefix for descending or '+' for ascending."
+                        "Use ',' as separator between multi sort options."
+                    )
+                    raise AppException(ErrorCode.VALIDATION_ERROR, msg)
+                else:
+                    continue
+            sort_clauses.append(column.desc() if direction == "desc" else column.asc())
+        return sort_clauses
+
+    def _apply_filter(
+        self,
+        stmt,
+        q: str | None = None,
+        types: list[str] | None = None,
+        category_ids: list[int] | None = None,
+        tags: list[str] | None = None,
+        sort: str | None = None,
+    ):
+        if q is not None:
+            stmt = stmt.where(Document.title.ilike(f"%{q.strip()}%"))
+        if (types is not None) and (len(types) > 0):
+            stmt = stmt.where(Document.file_type.in_(types))
+        if (category_ids is not None) and (len(category_ids) > 0):
+            stmt = stmt.where(Document.category_id.in_(category_ids))
+        if (tags is not None) and (len(tags) > 0):
+            stmt = (
+                stmt.join(
+                    document_tags_table,
+                    Document.id == document_tags_table.c.document_id,
+                )
+                .join(Tag, Tag.id == document_tags_table.c.tag_id)
+                .where(Tag.name.in_(tags))
+                .distinct()
             )
+        if (sort is not None) and (len(sort) > 0):
+            sort_clauses = self._parse_sort(sort)
+            if sort_clauses:
+                stmt = stmt.order_by(*sort_clauses)
         else:
-            return self.crud_doc.get_multi(
-                Document.owner_id == owner_id,
-                Document.status == status,
-                skip=skip,
-                limit=limit,
-            )
+            stmt = stmt.order_by(Document.created_at.desc())
+        return stmt
 
-    def list_public_document(
-        self, owner: int | str | User, page: int, limit: int
-    ) -> tuple[Sequence[Document], int]:
-        if isinstance(owner, User):
-            owner_id = owner.id
-        elif isinstance(owner, str):
-            owner_id = self.crud_user.get_by_identity(owner).id
-        else:
-            owner_id = owner
-
-        return self.crud_doc.get_multi(
-            Document.owner_id == owner_id,
-            Document.status == DocumentStatus.READY,
-            Document.visibility == DocumentVisibility.PUBLIC,
-            skip=(page - 1) * limit,
-            limit=limit,
-        )
-
-    def get_document_list(
-        self, owner: int | str | User, viewer: int | User, page: int, limit: int
+    def get_public_documents(
+        self,
+        owner_name: str | None = None,
+        q: str | None = None,
+        types: list[str] | None = None,
+        category_ids: list[int] | None = None,
+        tags: list[str] | None = None,
+        sort: str | None = None,
+        page=1,
+        limit: int = 20,
     ) -> tuple[Sequence[Document], int]:
         """
-        Select documents that belong to a specific owner.
-        If viewer
+        Select Public Documents.
+        Any filter field with default value None will be ignored.
         Args:
-            owner: owner of the documents. This can be instance User or user_id(int) or username/email(str)
-            viewer: the user that query this list. This can be instance User or user_id(int) or username/email(str)
+            owner_name: owner.username
+            q: query keyword
+            types:
+            category_ids:
+            tags:
+            sort:
             page:
             limit:
 
         Returns:
+
+        Raises:
+            AppException:
+                - ErrorCode.RESOURCE_NOT_FOUND: if owner_name was provided but not exist in database.
         """
-        if isinstance(owner, User):
-            owner_id = owner.id
-        elif isinstance(owner, str):
-            owner_id = self.crud_user.get_by_identity(owner).id
-        else:
-            owner_id = owner
 
-        if isinstance(viewer, User):
-            viewer_id = viewer.id
-        else:
-            viewer_id = viewer
-
-        if viewer_id != owner_id:
-            return self.list_public_document(owner_id, page, limit)
-        return self.crud_doc.get_multi(
-            Document.owner_id == owner_id,
+        # build base query statement
+        stmt = select(Document).where(
+            Document.visibility == DocumentVisibility.PUBLIC,
             Document.status == DocumentStatus.READY,
-            skip=(page - 1) * limit,
-            limit=limit,
         )
+
+        if owner_name is not None:
+            owner = self.crud_user.get_by_identity(
+                owner_name,
+                on_not_found=AppException(
+                    ErrorCode.RESOURCE_NOT_FOUND, "User not found"
+                ),
+            )
+            stmt = stmt.where(Document.owner_id == owner.id)
+
+        stmt = self._apply_filter(
+            stmt,
+            q=q,
+            types=types,
+            category_ids=category_ids,
+            tags=tags,
+            sort=sort,
+        )
+
+        # count
+        total = (
+            self.db_session.execute(
+                select(func.count()).select_from(stmt.subquery())
+            ).scalar()
+            or 0
+        )
+        if total == 0:
+            return list(), 0
+
+        # pagination
+        stmt = stmt.offset((page - 1) * limit).limit(limit)
+        res = self.db_session.execute(stmt).scalars().all()
+
+        return res, total
+
+    def get_my_documents(
+        self,
+        user_id: int,
+        q: str | None = None,
+        types: list[str] | None = None,
+        category_ids: list[int] | None = None,
+        tags: list[str] | None = None,
+        sort: str | None = None,
+        page=1,
+        limit: int = 20,
+        visibility: DocumentVisibility | None = None,
+        statuses: list[DocumentStatus] | None = None,
+    ) -> tuple[Sequence[Document], int]:
+        """
+
+        Args:
+            user_id:
+            q:
+            types:
+            category_ids:
+            tags:
+            sort:
+            page:
+            limit:
+            visibility:
+            statuses:
+
+        Returns:
+
+        """
+
+        # check user exist
+        self.crud_user.get(
+            user_id,
+            on_not_found=AppException(ErrorCode.INVALID_CREDENTIALS, "User not found"),
+        )
+
+        # build base query statement
+        stmt = select(Document).where(
+            Document.owner_id == user_id,
+        )
+        if visibility is not None:
+            stmt = stmt.where(Document.visibility == visibility)
+        if (statuses is not None) and (len(statuses) > 0):
+            stmt = stmt.where(Document.status.in_(statuses))
+        stmt = self._apply_filter(
+            stmt,
+            q=q,
+            types=types,
+            category_ids=category_ids,
+            tags=tags,
+            sort=sort,
+        )
+
+        # count
+        total = (
+            self.db_session.execute(
+                select(func.count()).select_from(stmt.subquery())
+            ).scalar()
+            or 0
+        )
+        if total == 0:
+            return list(), 0
+
+        # pagination
+        stmt = stmt.offset((page - 1) * limit).limit(limit)
+        res = self.db_session.execute(stmt).scalars().all()
+
+        return res, total
 
     def create_document(
         self,
@@ -182,12 +327,12 @@ class DocumentService:
 
         if user is None:
             # document view by guest (not login)
-            err = self.access_control.can_view_by_anyone(document)
+            err = self.access_control.can_access_by_anyone(document)
             if err:
                 raise err
         else:
             # document view by user
-            err = self.access_control.can_view_document(user, document)
+            err = self.access_control.can_access_document(user, document)
             if err:
                 raise err
             # increase view
@@ -211,7 +356,7 @@ class DocumentService:
             ),
         )
 
-        err = self.access_control.can_download_document(user, document)
+        err = self.access_control.can_access_document(user, document)
         if err:
             raise err
 
@@ -226,9 +371,7 @@ class DocumentService:
         if self.redis_client.set(redis_download_key, "1", ex=3600, nx=True):
             document.download_count += 1
 
-        ori_url, pdf_url = self.storage_service.generate_download_url_for_document(
-            document
-        )
+        ori_url, pdf_url = self.storage_service.generate_download_url(document)
 
         if document_format == ".pdf":
             return pdf_url
@@ -327,7 +470,7 @@ class DocumentService:
             ),
         )
 
-        err = self.access_control.can_view_document(user, document)
+        err = self.access_control.can_access_document(user, document)
         if err:
             raise err
         self.crud_doc.add_like(self.crud_doc.get(document_id), user.id)
@@ -340,7 +483,7 @@ class DocumentService:
             ),
         )
 
-        err = self.access_control.can_view_document(user, document)
+        err = self.access_control.can_access_document(user, document)
         if err:
             raise err
 

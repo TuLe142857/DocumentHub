@@ -1,5 +1,3 @@
-from typing import Annotated
-
 from fastapi import APIRouter, Depends
 
 from app.core import APIResponse, ResponseSuccessSchema
@@ -13,17 +11,22 @@ from app.services.auth_service import (
     AuthServiceDep,
     CurrentUserDep,
 )
+from app.services.storage_service import StorageServiceDep
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.get(
     "/whoami",
-    response_model=ResponseSuccessSchema[SelfInfoResponse],
-    summary="Get self info(require login)",
+    response_model=ResponseSuccessSchema[MeResponse],
+    summary="Get self info(require login or return error)",
 )
-def whoami(user: CurrentUserDep):
-    res = SelfInfoResponse.model_validate(user)
+def whoami(user: CurrentUserDep, storage_service: StorageServiceDep):
+    res = MeResponse.model_validate(user)
+    if user.profile.avatar_object_key:
+        res.avatar_url = storage_service.generate_image_url(
+            user.profile.avatar_object_key
+        )
     return APIResponse.ok(data=res)
 
 
@@ -32,19 +35,19 @@ def whoami(user: CurrentUserDep):
     response_model=ResponseSuccessSchema,
     summary="Request registration, provide email to get otp code",
 )
-def request_registration(json_body: RegistrationRequest, auth_service: AuthServiceDep):
+def request_registration(json_body: RegisterRequest, auth_service: AuthServiceDep):
     auth_service.request_registration(**json_body.model_dump())
     return APIResponse.ok()
 
 
 @router.post(
     "/register/verify",
-    response_model=ResponseSuccessSchema[VerifyRegistrationResponse],
+    response_model=ResponseSuccessSchema[RegisterVerifyResponse],
     summary="Verify by otp code received from email",
 )
-def verify_registration(body: VerifyRegistrationRequest, auth_service: AuthServiceDep):
+def verify_registration(body: RegisterVerifyRequest, auth_service: AuthServiceDep):
     registration_token = auth_service.verify_registration(**body.model_dump())
-    response_data = VerifyRegistrationResponse(registration_code=registration_token)
+    response_data = RegisterVerifyResponse(registration_code=registration_token)
     return APIResponse.ok(data=response_data)
 
 
@@ -53,9 +56,7 @@ def verify_registration(body: VerifyRegistrationRequest, auth_service: AuthServi
     response_model=ResponseSuccessSchema,
     summary="Complete registration and automatic login",
 )
-def complete_registration(
-    body: CompleteRegistrationRequest, auth_service: AuthServiceDep
-):
+def complete_registration(body: RegisterCompleteRequest, auth_service: AuthServiceDep):
     access_token, refresh_token = auth_service.complete_registration(
         **body.model_dump()
     )
@@ -137,7 +138,7 @@ def refresh_access_token(
     response_model=ResponseSuccessSchema,
     summary="Forgot password, get otp from mail",
 )
-def forgot_password(body: ForgotPasswordRequest, auth_service: AuthServiceDep):
+def forgot_password(body: PasswordForgotRequest, auth_service: AuthServiceDep):
     auth_service.forgot_password(**body.model_dump())
     return APIResponse.ok()
 
@@ -147,6 +148,6 @@ def forgot_password(body: ForgotPasswordRequest, auth_service: AuthServiceDep):
     response_model=ResponseSuccessSchema,
     summary="Reset password by otp from mail",
 )
-def reset_password(body: ResetPasswordRequest, auth_service: AuthServiceDep):
+def reset_password(body: PasswordResetRequest, auth_service: AuthServiceDep):
     auth_service.reset_password(**body.model_dump())
     return APIResponse.ok()

@@ -13,6 +13,8 @@ x-backend-default: &backend-build-default
       http://localhost:8000,
       http://localhost:${FRONTEND_PORT_EXTERNAL:-5173},
       http://localhost:${NGINX_PORT_EXTERNAL:-80},
+      http://documenthub.local:${FRONTEND_PORT_EXTERNAL:-5173},
+      http://documenthub.local
       "
 
     S3_ENDPOINT: http://minio:9000

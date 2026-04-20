@@ -4,7 +4,7 @@ from app.core import APIResponse, ResponseSuccessSchema
 from app.schemas.category_schema import CategorySchema
 from app.services.category_service import CategoryServiceDep
 
-router = APIRouter(prefix="/categories", tags=["Category"])
+router = APIRouter(prefix="/categories", tags=["Categories"])
 
 
 @router.get("", response_model=ResponseSuccessSchema[list[CategorySchema]])

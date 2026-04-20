@@ -2,22 +2,18 @@ from fastapi import APIRouter, Body, Form, Query
 
 from app.core import (
     APIResponse,
-    ResponsePaginationSchema,
     ResponseSuccessSchema,
 )
-
-# from app.dependencies import DBSessionDep
-# from app.schemas.category_schema import CategorySchema
 from app.schemas.document_schema import *
 from app.services.auth_service import (
-    AuthServiceDep,
     CurrentUserDep,
     OptionalCurrentUserDep,
 )
+from app.services.collection_service import CollectionServiceDep
 from app.services.document_service import DocumentServiceDep
 from app.services.storage_service import StorageServiceDep
 
-router = APIRouter(prefix="/documents", tags=["Document"])
+router = APIRouter(prefix="/documents", tags=["Documents"])
 
 
 @router.get(
@@ -42,42 +38,6 @@ def get_max_supported_document_size_bytes():
     return APIResponse.ok(data=settings.MAX_FILE_SIZE)
 
 
-@router.get(
-    "",
-    response_model=ResponsePaginationSchema[DocumentSummaryResponse],
-    summary="Get user documents. Require login.",
-    description="Returns a paginated list of documents owned by the current user.",
-)
-def get_document_list(
-    current_user: CurrentUserDep,
-    document_service: DocumentServiceDep,
-    auth_service: AuthServiceDep,
-    storage_service: StorageServiceDep,
-    query: Annotated[DocumentQuery, Query()],
-):
-    documents, total_items = document_service.list_self_documents(
-        owner_id=current_user.id,
-        page=query.page,
-        limit=query.limit,
-        status=query.status,
-    )
-
-    response_data = [
-        DocumentSummaryResponse.build(
-            from_obj=doc,
-            thumbnail_url=storage_service.generate_presigned_url_for_document(doc)[0],
-        )
-        for doc in documents
-    ]
-
-    return APIResponse.paginate(
-        data=response_data,
-        current_page=query.page,
-        per_page=query.limit,
-        total_items=total_items,
-    )
-
-
 @router.post(
     "",
     response_model=ResponseSuccessSchema,
@@ -85,7 +45,7 @@ def get_document_list(
     description="Upload a new document.",
 )
 def upload_document(
-    body: Annotated[DocumentUploadFormRequest, Form(media_type="multipart/form-data")],
+    body: Annotated[DocumentUploadRequest, Form(media_type="multipart/form-data")],
     current_user: CurrentUserDep,
     document_service: DocumentServiceDep,
 ):
@@ -105,7 +65,7 @@ def upload_document(
 
 @router.get(
     "/{document_id}",
-    response_model=ResponseSuccessSchema[DocumentDetailsResponse],
+    response_model=ResponseSuccessSchema[DocumentDetailsSchema],
     summary="Get document details",
     description="Retrieve detailed information of a specific document.",
 )
@@ -117,15 +77,13 @@ def get_document_details(
 ):
     document = document_service.view_document(current_user, document_id)
 
-    thumbnail_url, preview_url, _ = storage_service.generate_presigned_url_for_document(
-        document
-    )
+    thumbnail_url, preview_url, _ = storage_service.generate_document_url(document)
 
     check_like = False
     if current_user is not None:
         check_like = document_service.check_like(document_id, current_user.id)
 
-    response_data = DocumentDetailsResponse.build(
+    response_data = DocumentDetailsSchema.build(
         document,
         thumbnail_url=thumbnail_url,
         preview_url=preview_url,
@@ -217,7 +175,7 @@ def remove_tag(
     return APIResponse.ok()
 
 
-@router.post(
+@router.put(
     "/{document_id}/like",
     response_model=ResponseSuccessSchema,
     summary="Like document",
@@ -263,18 +221,24 @@ def download_document(
     return APIResponse.ok(data=url)
 
 
-@router.get(
+@router.put(
     "/{document_id}/collections",
     response_model=ResponseSuccessSchema,
-    summary="List collections that contain specific document",
+    summary="Sync document collections",
+    description=(
+        "Synchronize the list of collections for a document."
+        "This will add the document to new collections and remove "
+        "it from any existing collections not included in the provided list. "
+        "Operation is scoped to the current user's collections only."
+    ),
 )
-def get_collections_of_document():
-    return APIResponse.ok(message="Coming Soon")
-
-
-@router.put("/{document_id}/collections", response_model=ResponseSuccessSchema)
 def put_document_to_collections(
     collection_ids: Annotated[list[int], Body(embed=True)],
+    document_id: int,
     current_user: CurrentUserDep,
+    collection_service: CollectionServiceDep,
 ):
-    return APIResponse.ok(message="Coming Soon")
+    collection_service.sync_document_collections(
+        user=current_user, document_id=document_id, collection_ids=collection_ids
+    )
+    return APIResponse.ok(message="ok")

@@ -85,7 +85,7 @@ const Header = () => {
             <Upload />
             <div className="hidden md:block">Upload</div>
           </button>
-          <AvatarDropDown user={user} className="min-w-10 min-h-10 " />
+          <AvatarDropDown user={user} />
         </div>
       )}
       {!isAuthenticated && (

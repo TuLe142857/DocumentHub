@@ -5,7 +5,7 @@ from app.schemas.report_schemas import ReportReasonSchema, ReportRequest
 from app.services.auth_service import CurrentUserDep
 from app.services.report_service import ReportServiceDep
 
-router = APIRouter(prefix="/reports", tags=["reports"])
+router = APIRouter(prefix="/reports", tags=["Reports"])
 
 
 @router.get(

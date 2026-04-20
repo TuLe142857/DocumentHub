@@ -1,17 +1,14 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import api from '@/api/api.js';
+import authApi from '@/api/authApi.js';
 
 export const fetchUserInfo = createAsyncThunk(
   'auth/fetchUserInfo',
   async (_, thunkAPI) => {
     try {
-      // alert("debug slice fetching user ....");
-      const response = await api.get('auth/whoami');
-      // alert("debug slice fetching user ok");
+      const response = await authApi.whoami();
       return response.data.data;
     } catch (error) {
       const msg = error.response?.data?.message || 'Something went wrong.';
-      // alert("debug slice fetching user error" + msg);
       return thunkAPI.rejectWithValue(msg);
     }
   }

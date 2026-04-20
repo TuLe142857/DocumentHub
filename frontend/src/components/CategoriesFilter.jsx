@@ -5,8 +5,8 @@
  */
 
 /**
- * @callback selectCategoryCallback
- * @param {Number} id
+ * @callback CategorySelectCallback
+ * @param {Number} id - category id
  */
 
 /**
@@ -18,7 +18,7 @@
  * @param {Object} props
  * @param {Array<Category>} props.categories
  * @param {Array<Number>} props.selectedCategories
- * @param {selectCategoryCallback} props.onSelect
+ * @param {CategorySelectCallback} props.onSelect
  * @param {removeCategoryCallback} props.onRemove
  * @returns {React.JSX.Element}
  * @constructor

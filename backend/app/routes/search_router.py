@@ -1,38 +1,22 @@
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, Query
 
 from app.core import APIResponse, ResponsePaginationSchema
-from app.schemas.document_schema import DocumentSummaryResponse
-from app.schemas.search_schema import SearchQueryDep
-from app.services.auth_service import OptionalCurrentUserDep
-from app.services.search_service import SearchServiceDep
+from app.schemas.document_schema import DocumentPublicQuery, DocumentSummarySchema
+from app.services.document_service import DocumentServiceDep
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
 
-@router.get("", response_model=ResponsePaginationSchema[DocumentSummaryResponse])
+@router.get("", response_model=ResponsePaginationSchema[DocumentSummarySchema])
 def search(
-    query: SearchQueryDep,
-    current_user: OptionalCurrentUserDep,
-    search_service: SearchServiceDep,
+    query: Annotated[DocumentPublicQuery, Query()], document_service: DocumentServiceDep
 ):
-    if current_user is not None:
-        docs, total_docs = search_service.search_documents_with_personalization(
-            user=current_user,
-            keywords=query.keywords,
-            category_id=query.category_id,
-            tags=query.tags,
-            page=query.page,
-            limit=query.limit,
-        )
-    else:
-        docs, total_docs = search_service.search_documents(
-            keywords=query.keywords,
-            category_id=query.category_id,
-            tags=query.tags,
-            page=query.page,
-            limit=query.limit,
-        )
-    res_data = [DocumentSummaryResponse.model_validate(doc) for doc in docs]
+    docs, total_docs = document_service.get_public_documents(
+        **query.model_dump(exclude_none=True)
+    )
+    res_data = [DocumentSummarySchema.model_validate(doc) for doc in docs]
     return APIResponse.paginate(
         current_page=query.page,
         per_page=query.limit,

@@ -7,14 +7,14 @@ from app.core import (
     ResponsePaginationSchema,
     ResponseSuccessSchema,
 )
-from app.schemas.user_schema import UserSchema, UserSearchQuery
+from app.schemas.user_schema import UserPrivateProfileSchema, UserSearchQuery
 from app.services.auth_service import CurrentAdminDep
 from app.services.user_service import UserServiceDep
 
 router = APIRouter(prefix="/users")
 
 
-@router.get("", response_model=ResponsePaginationSchema[UserSchema])
+@router.get("", response_model=ResponsePaginationSchema[UserPrivateProfileSchema])
 def get_user_list(
     query: Annotated[UserSearchQuery, Query()],
     admin: CurrentAdminDep,
@@ -28,7 +28,7 @@ def get_user_list(
         limit=query.limit,
     )
 
-    res_data = [UserSchema.model_validate(user) for user in users]
+    res_data = [UserPrivateProfileSchema.model_validate(user) for user in users]
     return APIResponse.paginate(
         current_page=query.page,
         per_page=query.limit,

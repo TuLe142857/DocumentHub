@@ -4,7 +4,7 @@ from pydantic import AliasPath, BaseModel, BeforeValidator, ConfigDict, Field
 
 from app.models import *
 
-from .document_schema import DocumentSummaryResponse
+from .document_schema import DocumentSummarySchema
 
 
 class ReportReasonSchema(BaseModel):
@@ -22,7 +22,7 @@ class ReportSchema(BaseModel):
     status: Annotated[ReportStatus, Field]
 
 
-class ReportedDocumentSchema(DocumentSummaryResponse):
+class ReportedDocumentSchema(DocumentSummarySchema):
     @staticmethod
     def count_report(doc: Document) -> int:
         r = [_ for _ in doc.reports if _.status == ReportStatus.PENDING]
@@ -32,6 +32,8 @@ class ReportedDocumentSchema(DocumentSummaryResponse):
 
 
 class ReportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     reason: Annotated[int, Field(description="ReportReason.id")]
     desc: Annotated[str, Field(default="", description="Report reason description")]
 

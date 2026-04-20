@@ -1,6 +1,5 @@
 from contextlib import asynccontextmanager
 
-from botocore.exceptions import ClientError
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -22,10 +21,22 @@ celery_worker = create_worker()
 
 
 def create_s3_bucket(bucket_name: str):
+    s3 = get_s3()
+    logger = get_logger()
     try:
-        get_s3().create_bucket(Bucket=bucket_name)
-    except ClientError:
-        pass
+        s3.create_bucket(Bucket=bucket_name)
+    except s3.exceptions.BucketAlreadyOwnedByYou:
+        logger.debug(f"When create Bucket '{bucket_name}': BucketAlreadyOwnedByYou")
+    except s3.exceptions.BucketAlreadyExists:
+        logger.error(
+            f"When create Bucket '{bucket_name}': Bucket already exists but not Owned by You"
+        )
+        raise
+    except Exception as e:
+        logger.error(
+            f"Something went wrong when creating S3 Bucket '{bucket_name}' {str(e)}"
+        )
+        raise
 
 
 def clear_settings_cache():
@@ -41,8 +52,11 @@ async def custom_lifespan(app_instance: FastAPI):
     # startup...
 
     ORMBase.metadata.create_all(get_db_engine())
-
+    logger = get_logger()
     settings = get_settings()
+    res = get_s3().list_buckets()
+    logger.debug(f"Buckets in S3: {res['Buckets']}")
+
     create_s3_bucket(settings.S3_DOCUMENTS_BUCKET)
     create_s3_bucket(settings.S3_IMAGES_BUCKET)
 
@@ -56,7 +70,11 @@ def create_app() -> FastAPI:
     logger = get_logger()
     settings = get_settings()
 
-    app_instance = FastAPI(lifespan=custom_lifespan)
+    app_instance = FastAPI(
+        lifespan=custom_lifespan,
+        summary="Hello World!",
+        description="Some description...",
+    )
 
     app_instance.add_middleware(
         CORSMiddleware,

@@ -46,7 +46,8 @@ class JWTPayload:
     @staticmethod
     def from_dict(data: dict[str, Any]) -> "JWTPayload":
         """
-        Raises: ValueError when validate failed
+        Raises:
+            ValueError: when validate failed
         """
         for required_key in JWTPayload.RESERVED_KEYS:
             if required_key not in data:
