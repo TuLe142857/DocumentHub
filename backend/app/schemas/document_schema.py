@@ -1,6 +1,6 @@
 import datetime
 from typing import Annotated, Any
-
+import re
 from fastapi import UploadFile
 from pydantic import (
     AfterValidator,
@@ -16,51 +16,39 @@ from app.core import AppException, ErrorCode, PaginationQuery, get_settings
 from app.models import DocumentStatus, DocumentVisibility
 from app.utils import get_file_extension
 
+def validate_file(file: UploadFile) -> UploadFile:
+    filename = file.filename
+
+    if filename is None:
+        raise AppException(ErrorCode.VALIDATION_ERROR, "Invalid file name")
+    try:
+        extension = get_file_extension(filename)
+    except ValueError:
+        raise AppException(ErrorCode.VALIDATION_ERROR, "Can not detect file extension")
+
+    settings = get_settings()
+    if not extension in settings.SUPPORTED_FILE_TYPE:
+        raise AppException(ErrorCode.UNSUPPORTED_FILE_TYPE, f"File extension {extension} not supported. Supported file extension: {settings.SUPPORTED_FILE_TYPE}")
+
+    return file
+
+
+def validate_tag_name(tag_name: str) -> str:
+    tag_name = tag_name.strip()
+    if len(tag_name) >= 50:
+        raise AppException(ErrorCode.VALIDATION_ERROR, "Tag name too long, max 50 characters")
+    if len(tag_name) == 0:
+        raise AppException(ErrorCode.VALIDATION_ERROR, "Tag name cannot be empty")
+    if (not re.fullmatch(r"[a-z0-9-_]+", tag_name)) or tag_name.startswith('-') or tag_name.startswith('_'):
+        raise AppException(ErrorCode.VALIDATION_ERROR,
+                           "Invalid tag name. Tag name can only contain 'a-z', '0-9', '-' and '_'. Tag name can not start with '-' or '_'")
+    return tag_name
+
+def validate_tag_name_list(tag_names: list[str]) -> list[str]:
+    return [validate_tag_name(t) for t in tag_names]
 
 class DocumentUploadRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
-    # ----------------------------------------------------
-    #               CUSTOM VALIDATOR
-    # ----------------------------------------------------
-    @staticmethod
-    def validate_file_name(file_name: str) -> str:
-        settings = get_settings()
-        index = file_name.rfind(".")
-        if index == -1:
-            raise AppException(
-                ErrorCode.UNSUPPORTED_FILE_TYPE,
-                f"Can not find file extension in filename '{file_name}'",
-            )
-        extension = file_name[index::]
-        if extension not in settings.SUPPORTED_FILE_TYPE:
-            raise AppException(
-                ErrorCode.UNSUPPORTED_FILE_TYPE,
-                f"File extension '{extension}' not supported",
-            )
-        return file_name
-
-    @staticmethod
-    def validate_file(file: UploadFile) -> UploadFile:
-        DocumentUploadRequest.validate_file_name(file.filename)
-        return file
-
-    @staticmethod
-    def validate_tag_name(tag_name: str) -> str:
-        tag_name = tag_name.strip()
-        if " " in tag_name:
-            raise AppException(
-                ErrorCode.VALIDATION_ERROR, f"Tag name cannot contain spaces {tag_name}"
-            )
-        if not tag_name.islower():
-            raise AppException(
-                ErrorCode.VALIDATION_ERROR, "Tag name cannot contain uppercase"
-            )
-        return tag_name
-
-    @staticmethod
-    def validate_tag_name_list(tag_names: list[str]) -> list[str]:
-        return [DocumentUploadRequest.validate_tag_name(_) for _ in tag_names]
 
     # ----------------------------------------------------
     #               FIELDS
@@ -89,8 +77,11 @@ class DocumentUpdateRequest(BaseModel):
     desc: Annotated[str | None, Field(default=None)]
     category_id: Annotated[int | None, Field(default=None)]
     visibility: Annotated[DocumentVisibility | None, Field(default=None)]
-    tags: Annotated[list[str] | None, Field(default=None)]
+    tags: Annotated[list[str] | None, Field(default=None), AfterValidator(validate_tag_name_list)]
 
+class DocumentTagSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    tag_name: Annotated[str, Field(), AfterValidator(validate_tag_name)]
 
 class DocumentPublicQuery(PaginationQuery):
     """

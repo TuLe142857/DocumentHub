@@ -13,9 +13,9 @@ class TrendingQuery(BaseModel):
             description="Optional category ID. If None or not provided, results will include items from all categories.",
         ),
     ]
-    timeframe: Annotated[
-        Literal["daily", "weekly", "monthly", "all_time"], Field(default="monthly")
-    ]
+    # timeframe: Annotated[
+    #     Literal["daily", "weekly", "monthly", "all_time"], Field(default="monthly")
+    # ]
     limit: Annotated[int, Field(ge=0, default=10)]
 
 

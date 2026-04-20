@@ -149,11 +149,11 @@ def restore_document(
 def add_tag(
     current_user: CurrentUserDep,
     document_id: int,
-    tag_name: Annotated[str, Body(embed=True)],
+    body: DocumentTagSchema,
     document_service: DocumentServiceDep,
 ):
     document_service.add_tag_to_document(
-        user=current_user, document_id=document_id, tag_name=tag_name
+        user=current_user, document_id=document_id, tag_name=body.tag_name
     )
     return APIResponse.ok()
 
@@ -166,11 +166,11 @@ def add_tag(
 def remove_tag(
     current_user: CurrentUserDep,
     document_id: int,
-    tag_name: Annotated[str, Body(embed=True)],
+    body: DocumentTagSchema,
     document_service: DocumentServiceDep,
 ):
     document_service.remove_tag_from_document(
-        user=current_user, document_id=document_id, tag_name=tag_name
+        user=current_user, document_id=document_id, tag_name=body.tag_name
     )
     return APIResponse.ok()
 
