@@ -32,7 +32,7 @@ const Header = () => {
         params.set('q', searchKeyWord);
         setSearchParams(params);
       } else {
-        const params = new URLSearchParams(location.search);
+        const params = new URLSearchParams();
         params.set('q', searchKeyWord);
         navigate(`/search?${params.toString()}`);
       }

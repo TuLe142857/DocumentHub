@@ -22,7 +22,7 @@ const TrashTab = () => {
         setError(null);
 
         const res = await api.get(`users/me/documents`, {
-          params: { status: 'DELETED' },
+          params: { statuses: 'DELETED' },
         });
         const meta = res.data?.meta;
         updatePagination({
@@ -60,6 +60,7 @@ const TrashTab = () => {
   if (error) return <ErrorPage msg={error} />;
   return (
     <div className="flex flex-col p-2 gap-2">
+      <div>Items in trash will be deleted after 30 days</div>
       {docs &&
         docs?.map((doc) => (
           <div>

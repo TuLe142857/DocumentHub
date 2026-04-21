@@ -1,20 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import {
+  Pen,
   Trash2,
   FolderPlus as AddCollectionIcon,
   ArrowLeft as GoBackIcon,
   Folder as CollectionIcon,
+  PencilIcon,
 } from 'lucide-react';
 
 import api from '@/api/api.js';
+import collectionApi from '@/api/collectionApi.js';
 import PageNavigation from '@/components/PageNavigation.jsx';
 import usePagination from '@/hooks/usePagination.jsx';
 import CollectionCard from '@/components/CollectionCard.jsx';
 
-import Modal from '@/components/Modal.jsx';
+import Modal from '@/modal/Modal.jsx';
 import CollectionCreateForm from '@/components/forms/CollectionCreateForm.jsx';
+import DocumentCard from '@/components/DocumentCard.jsx';
 
 const CollectionListTab = ({
   collections,
@@ -48,11 +52,73 @@ const CollectionListTab = ({
   );
 };
 
-const CollectionDetails = ({ collection, onDeleteDocument }) => {
-  return <div>Collection details...</div>;
+const CollectionDetails = ({ collection }) => {
+  const [docs, setDocs] = useState([]);
+  const { pagination, updatePagination, setPage } = usePagination();
+  const fetchDocument = useCallback(async () => {
+    try {
+      const query = {
+        page: pagination.currentPage,
+        limit: pagination.limit,
+      };
+      const response = await collectionApi.getItems(collection.id, query);
+      console.log('res', response.data);
+      const data = response.data.data;
+      const meta = response.data.meta;
+      updatePagination({
+        currentPage: meta.current_page,
+        limit: meta.per_page,
+        totalPages: meta.total_pages,
+        totalItems: meta.total_items,
+        hasNextPage: meta.has_next,
+        hasPreviousPage: meta.has_prev,
+      });
+      setDocs(data);
+      console.log(data);
+    } catch (err) {
+      console.log(err);
+    }
+  }, [
+    collection.id,
+    pagination.currentPage,
+    pagination.limit,
+    updatePagination,
+  ]);
+
+  useEffect(() => {
+    fetchDocument();
+  }, [fetchDocument]);
+
+  const handleDelete = async (id) => {
+    if (!confirm('are you sure?')) return;
+    await collectionApi.removeItem(collection.id, id);
+    setDocs((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  return (
+    <div className="flex flex-col">
+      {docs &&
+        docs.map((doc) => (
+          <div className="relative">
+            <DocumentCard document={doc} orientation={'horizontal'} />
+            <button
+              className="absolute top-2 right-2 p-2 rounded-sm text-gray-400 hover:text-red-500 hover:bg-red-200/50"
+              onClick={() => handleDelete(doc.id)}
+            >
+              <Trash2 />
+            </button>
+          </div>
+        ))}
+      <PageNavigation
+        page={pagination.currentPage}
+        totalPage={pagination.totalPages}
+        onPageChange={setPage}
+      />
+    </div>
+  );
 };
 
-const CollectionsTab = ({ username }) => {
+const CollectionsTab = () => {
   const { id: collection_id } = useParams();
   const { user: currentUser, isAuthenticated } = useSelector(
     (state) => state.user
@@ -96,7 +162,6 @@ const CollectionsTab = ({ username }) => {
   useEffect(() => {
     fetchData();
   }, [
-    currentUser,
     collection_id,
     pagination.currentPage,
     pagination.limit,
@@ -131,8 +196,14 @@ const CollectionsTab = ({ username }) => {
           <CollectionIcon color={'blue'} fill={'blue'} size={48} />
           <div className="flex ">
             <div>
-              <div className="text-xl text-black font-bold">
+              <div className="items-center flex flex-row gap-x-2 text-xl text-black font-bold">
                 {selectedCollection.name}
+                <button
+                  className="hover:text-blue-500 hover:cursor-pointer"
+                  onClick={() => alert('Rename collection feature coming soon')}
+                >
+                  <Pen size={16} />
+                </button>
               </div>
               <div>
                 {selectedCollection?.total_items || 0} item
@@ -144,10 +215,7 @@ const CollectionsTab = ({ username }) => {
 
         <hr className="text-gray-300 my-1" />
 
-        <CollectionDetails
-          // onDeleteDocument={(doc) => ()}
-          collection={selectedCollection}
-        />
+        <CollectionDetails collection={selectedCollection} />
       </div>
     );
   else
@@ -183,23 +251,6 @@ const CollectionsTab = ({ username }) => {
           onDeleteCollection={handleDeleteCollection}
           onSelectCollection={(c) => setSelectedCollection(c)}
         />
-
-        {/*{collections && (*/}
-        {/*  <div className="flex flex-row flex-wrap justify-start p-2 gap-2">*/}
-        {/*    {collections.map((collection) => (*/}
-        {/*      <div className="relative group flex flex-row items-center w-60 rounded-xl bg-white p-2 shadown border border-slate-200 hover:border-sky-500">*/}
-        {/*        <CollectionCard collection={collection} className="w-50 h-15" />*/}
-        {/*        <button*/}
-        {/*          className="absolute top-1 right-1 hidden group-hover:block rounded-sm p-1 m-2 text-gray-400 hover:text-red-500 hover:bg-red-200/50"*/}
-        {/*          onClick={() => handleDeleteCollection(collection)}*/}
-        {/*        >*/}
-        {/*          <Trash2 />*/}
-        {/*        </button>*/}
-        {/*      </div>*/}
-        {/*    ))}*/}
-        {/*  </div>*/}
-        {/*)}*/}
-
         <div className="mt-auto">
           <PageNavigation
             page={pagination.currentPage}

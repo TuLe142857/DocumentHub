@@ -12,11 +12,11 @@ import {
 
 import TabBar from '@/components/TabBar.jsx';
 import UserCard from '@/components/UserCard.jsx';
-import OverviewTab from '@/pages/user_profile/tabs/OverviewTab.jsx';
-import DocumentsTab from '@/pages/user_profile/tabs/DocumentsTab.jsx';
-import CollectionsTab from '@/pages/user_profile/tabs/CollectionsTab.jsx';
-import LikedDocumentsTab from '@/pages/user_profile/tabs/LikedDocumentsTab.jsx';
-import TrashTab from '@/pages/user_profile/tabs/TrashTab.jsx';
+import OverviewTab from '@/pages/user/tabs/OverviewTab.jsx';
+import DocumentsTab from '@/pages/user/tabs/DocumentsTab.jsx';
+import CollectionsTab from '@/pages/user/tabs/CollectionsTab.jsx';
+import LikedDocumentsTab from '@/pages/user/tabs/LikedDocumentsTab.jsx';
+import TrashTab from '@/pages/user/tabs/TrashTab.jsx';
 
 import AppLogo from '@/components/AppLogo.jsx';
 
@@ -70,15 +70,17 @@ const UserProfilePage = () => {
             icon: <TrashIcon />,
           },
         ]);
+      } else {
+        setTabs(publicTab);
       }
     };
 
     setup();
   }, [username, currentUser, isAuthenticated]);
 
-  useEffect(() => {
-    setActiveTab(queryParams.get('tab') || 'overview');
-  }, [queryParams]);
+  // useEffect(() => {
+  //   setActiveTab(queryParams.get('tab') || 'overview');
+  // }, [queryParams]);
 
   const onTabChange = (key) => {
     setActiveTab(key);
@@ -101,8 +103,8 @@ const UserProfilePage = () => {
         />
         {activeTab === 'overview' && <OverviewTab username={username} />}
         {activeTab === 'documents' && <DocumentsTab username={username} />}
-        {activeTab === 'collections' && <CollectionsTab username={username} />}
-        {activeTab === 'liked' && <LikedDocumentsTab username={username} />}
+        {activeTab === 'collections' && <CollectionsTab />}
+        {activeTab === 'liked' && <LikedDocumentsTab />}
         {activeTab === 'trash' && <TrashTab />}
       </div>
     </div>

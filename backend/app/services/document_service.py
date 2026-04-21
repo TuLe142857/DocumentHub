@@ -5,7 +5,7 @@ import uuid
 from fastapi import Depends
 from mypy_boto3_s3 import S3Client
 from redis import Redis
-from sqlalchemy import func, select
+from sqlalchemy import func, select, or_, and_
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode, get_settings
@@ -49,7 +49,6 @@ class DocumentService:
         "like": Document.like_count,
         "download": Document.download_count,
         "created_at": Document.created_at,
-        "updated_at": Document.updated_at,
     }
 
     def _parse_sort(self, s: str, raise_on_validate: bool = True):
@@ -258,6 +257,22 @@ class DocumentService:
 
         return res, total
 
+    def get_liked_document(self, user_id: int, page:int=0, limit:int=10) -> tuple[Sequence[Document], int]:
+        stmt = (
+            select(Document)
+                .join(DocumentLike, DocumentLike.document_id == Document.id)
+                .where(DocumentLike.user_id == user_id)
+                .where(or_(
+                Document.owner_id == user_id,
+                and_(Document.status == DocumentStatus.READY, Document.visibility == DocumentVisibility.PUBLIC),
+            ))
+        )
+        total = self.db_session.execute(select(func.count()).select_from(stmt.subquery())).scalar() or 0;
+        if total==0:
+            return list(), 0
+        stmt = stmt.offset((page - 1) * limit).limit(limit)
+        res = self.db_session.execute(stmt).scalars().all()
+        return res, total
     def create_document(
         self,
         owner_id: int,

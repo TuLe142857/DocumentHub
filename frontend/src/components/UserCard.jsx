@@ -5,7 +5,7 @@ import { useSelector } from 'react-redux';
 import { UserRoundPen, Pencil } from 'lucide-react';
 import Loading from '@/components/Loading.jsx';
 import ErrorPage from '@/pages/errors/ErrorPage.jsx';
-import Modal from '@/components/Modal.jsx';
+import Modal from '@/modal/Modal.jsx';
 import ProfileEditForm from '@/components/forms/ProfileEditForm.jsx';
 
 const getGenderPronouns = (gender) => {

@@ -39,6 +39,10 @@ Các port expose từ docker container ra máy host(Có thể chỉnh bằng `<>
 - MailHog(SMTP server): 1025
 - MailHog(Web UI): 8025
 
+## Khởi tạo dữ liệu ban đầu
+```shell
+make enter-db command="cli db seed"
+```
 ## Run test
 ``` shell
 make test

@@ -80,16 +80,18 @@ const ActiveFilters = ({
 };
 
 const SearchPage = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedCategories = searchParams.getAll('category_ids')?.map(Number) || [];
+  const selectedTags = searchParams.getAll('tags') || [];
 
   const [categories, setCategories] = useState([]);
-  const [selectedCategories, setSelectedCategories] = useState([]);
+
   const [docs, setDocs] = useState([]);
   const { pagination, updatePagination, setPage } = usePagination();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [tags, setTags] = useState([]);
+
   const [openFilerSidebar, setOpenFilerSidebar] = useState(false);
 
   useEffect(() => {
@@ -116,19 +118,11 @@ const SearchPage = () => {
         setLoading(true);
         setError(null);
 
-        const params = new URLSearchParams();
-        params.set('q', searchParams.get('q') || '');
-        if (searchParams.has('category_id')) {
-          params.set('category_id', searchParams.get('category_id'));
-        }
-        if (searchParams.has('tags')) {
-          searchParams.getAll('tags').forEach((tag) => {
-            params.append('tags', tag);
-          });
-        }
+        const params = new URLSearchParams(searchParams);
+
         params.set('page', pagination.currentPage);
         params.set('limit', pagination.limit);
-
+        console.log('params', params.toString());
         const res = await api.get('/search', { params: params });
 
         setDocs(res.data?.data);
@@ -156,6 +150,22 @@ const SearchPage = () => {
     updatePagination,
   ]);
 
+  const updateParams = (updates) => {
+    const params = new URLSearchParams(searchParams);
+
+    Object.entries(updates).forEach(([key, value]) => {
+      params.delete(key);
+
+      if (Array.isArray(value)) {
+        value.forEach((v) => params.append(key, v));
+      } else if (value != null) {
+        params.set(key, value);
+      }
+    });
+
+    setSearchParams(params);
+  };
+
   return (
     <div className={`flex flex-row w-screen`}>
       <div>
@@ -172,15 +182,17 @@ const SearchPage = () => {
             categories={categories}
             selectedCategories={selectedCategories}
             onSelectCategory={(id) =>
-              setSelectedCategories((prev) => [...prev, id])
+              updateParams({ category_ids: [...selectedCategories, id] })
             }
             onRemoveCategory={(id) =>
-              setSelectedCategories((prev) => prev.filter((i) => i !== id))
+              updateParams({
+                category_ids: selectedCategories.filter((c_id) => c_id !== id),
+              })
             }
-            tags={tags}
-            onAddTag={(t) => setTags((prev) => [...prev, t])}
+            tags={selectedTags}
+            onAddTag={(t) => updateParams({ tags: [...selectedTags, t] })}
             onRemoveTag={(t) =>
-              setTags((prev) => prev.filter((tag) => tag !== t))
+              updateParams({ tags: selectedTags.filter((item) => item !== t) })
             }
             className="sm:w-60 lg:w-100"
           />
@@ -194,21 +206,23 @@ const SearchPage = () => {
           {pagination.totalItems > 0 ? 's' : ''}
         </div>
 
-        {(selectedCategories.length > 0 || tags.length > 0) && (
+        {(selectedCategories.length > 0 || selectedTags.length > 0) && (
           <ActiveFilters
             categories={categories}
             selectedCategories={selectedCategories}
             onSelectCategory={(id) =>
-              setSelectedCategories((prev) => [...prev, id])
+              updateParams({ category_ids: [...selectedCategories, id] })
             }
             onRemoveCategory={(id) =>
-              setSelectedCategories((prev) => prev.filter((i) => i !== id))
+              updateParams({
+                category_ids: selectedCategories.filter((c_id) => c_id !== id),
+              })
             }
-            tags={tags}
-            onAddTag={(t) => setTags((prev) => [...prev, t])}
-            onRemoveTag={(t) =>
-              setTags((prev) => prev.filter((tag) => tag !== t))
-            }
+            tags={selectedTags}
+            onAddTag={(t) => updateParams({ tags: [...selectedTags, t] })}
+            onRemoveTag={(t) => {
+              updateParams({ tags: selectedTags.filter((item) => item !== t) });
+            }}
           />
         )}
 

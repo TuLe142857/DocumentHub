@@ -8,6 +8,7 @@ from app.core import (
     ResponsePaginationSchema,
     ResponseSuccessSchema,
     build_error_docs,
+    PaginationQuery,
 )
 from app.schemas.collection_schema import CollectionQuery, CollectionSchema
 from app.schemas.document_schema import (
@@ -101,6 +102,33 @@ def get_self_documents(
         user_id=current_user.id, **query.model_dump(exclude_none=True)
     )
 
+    res_data = [
+        DocumentSummarySchema.build(doc, storage_service.generate_document_url(doc)[0])
+        for doc in docs
+    ]
+    return APIResponse.paginate(
+        current_page=query.page,
+        per_page=query.limit,
+        total_items=total,
+        data=res_data,
+    )
+
+
+@router.get(
+    "/me/liked_documents",
+    response_model=ResponsePaginationSchema[DocumentSummarySchema],
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.VALIDATION_ERROR,
+    ),
+)
+def get_liked_documents(
+    current_user: CurrentUserDep,
+    query: Annotated[PaginationQuery, Query()],
+    document_service: DocumentServiceDep,
+    storage_service: StorageServiceDep,
+):
+    docs, total = document_service.get_liked_document(current_user.id, page=query.page, limit=query.limit);
     res_data = [
         DocumentSummarySchema.build(doc, storage_service.generate_document_url(doc)[0])
         for doc in docs

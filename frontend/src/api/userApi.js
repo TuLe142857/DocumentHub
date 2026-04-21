@@ -9,6 +9,8 @@ const userApi = {
     }),
   getMyDocuments: (params) =>
     api.get('/users/me/documents', { params: params }),
+  getMyLikedDocuments: (params) =>
+    api.get('/users/me/liked_documents', { params: params }),
   getMyCollections: (params) =>
     api.get('/users/me/collections', { params: params }),
 

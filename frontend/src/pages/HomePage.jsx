@@ -58,7 +58,9 @@ const HomePage = () => {
           console.log('Can not fetch Categories');
         }
         setCategories(data);
-      } catch {}
+      } catch {
+        console.log('Can not fetch Categories');
+      }
     };
     fetchCategories();
   }, []);
@@ -68,9 +70,12 @@ const HomePage = () => {
       setTrending([]);
       try {
         for (const category of categories) {
-          const response = await api.get(
-            `recommendation/trending?category_id=${encodeURIComponent(category.id)}`
-          );
+          const params = {
+            category_ids: category.id,
+            sort: '-view,-like,-download,-created_at',
+          };
+
+          const response = await api.get(`search`, { params: params });
           const documents = response.data?.data;
           const data = {
             category: category.name,
@@ -80,7 +85,6 @@ const HomePage = () => {
         }
       } catch (err) {
         console.log(err);
-      } finally {
       }
     };
     fetchTrending();

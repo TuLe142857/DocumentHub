@@ -23,11 +23,9 @@ const AddDocumentToCollectionForm = ({
   onSuccess,
   className = 'w-full max-w-md rounded-xl bg-white border border-gray-200 shadow-xl p-4',
 }) => {
-
   const [collections, setCollections] = useState([]);
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(false);
-
 
   const [checkedCollectionIds, setCheckedCollectionIds] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,7 +46,6 @@ const AddDocumentToCollectionForm = ({
     setPage(1);
   }, [debouncedQuery]);
 
-
   useEffect(() => {
     const fetchInitialChecked = async () => {
       try {
@@ -62,7 +59,9 @@ const AddDocumentToCollectionForm = ({
         );
         setCheckedCollectionIds(initialCheckedIds);
       } catch (err) {
-        toast.error(err?.response?.data.message || err?.message || "Something went wrong!");
+        toast.error(
+          err?.response?.data.message || err?.message || 'Something went wrong!'
+        );
       } finally {
         setIsInitializing(false);
       }
@@ -72,7 +71,6 @@ const AddDocumentToCollectionForm = ({
       fetchInitialChecked();
     }
   }, [doc?.id]);
-
 
   useEffect(() => {
     if (isInitializing) return;
@@ -101,16 +99,13 @@ const AddDocumentToCollectionForm = ({
     fetchCollections();
   }, [page, debouncedQuery, isInitializing]);
 
-
   const handleToggleCheck = (collectionId) => {
-    setCheckedCollectionIds(
-      (prev) =>
-        prev.includes(collectionId)
-          ? prev.filter((id) => id !== collectionId)
-          : [...prev, collectionId]
+    setCheckedCollectionIds((prev) =>
+      prev.includes(collectionId)
+        ? prev.filter((id) => id !== collectionId)
+        : [...prev, collectionId]
     );
   };
-
 
   const handleSave = async () => {
     setIsSaving(true);

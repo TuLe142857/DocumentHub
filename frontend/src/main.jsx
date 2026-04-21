@@ -5,13 +5,15 @@ import { Provider } from 'react-redux';
 import store from './store/store.jsx';
 import './index.css';
 import App from './App.jsx';
-
+import ModalProvider from '@/modal/ModalProvider.jsx';
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <Provider store={store}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </Provider>
+    <ModalProvider>
+      <Provider store={store}>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </Provider>
+    </ModalProvider>
   </StrictMode>
 );

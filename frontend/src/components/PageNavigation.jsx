@@ -15,7 +15,7 @@ import { ArrowRight, ArrowLeft } from 'lucide-react';
  */
 const PageNavigation = ({ page, totalPage, onPageChange }) => {
   return (
-    <div className="flex flex-row item-center justify-center gap-x-5 text-center bg-red-500">
+    <div className="flex flex-row item-center justify-center gap-x-5 text-center rounded-xl bg-sky-100 m-2">
       <button
         className="flex m-2 p-2 rounded-xl bg-sky-200 disabled:bg-gray-400 hover:bg-sky-400"
         disabled={page <= 1}

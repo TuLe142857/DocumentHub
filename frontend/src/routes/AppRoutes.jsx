@@ -8,10 +8,9 @@ import LoginPage from '@/pages/LoginPage.jsx';
 import RegisterPage from '@/pages/RegisterPage.jsx';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage.jsx';
 import UploadDocumentPage from '@/pages/UploadDocumentPage.jsx';
-import DocumentDetailPage from '@/pages/DocumentDetailPage.jsx';
+import DocumentDetailPage from '@/pages/document/DocumentDetailPage.jsx';
 import SearchPage from '@/pages/SearchPage.jsx';
-import UserProfilePage from '@/pages/user_profile/UserProfilePage.jsx';
-import CollectionPage from '@/pages/CollectionPage.jsx';
+import UserProfilePage from '@/pages/user/UserProfilePage.jsx';
 
 const AppRoutes = () => {
   return (
@@ -39,7 +38,6 @@ const AppRoutes = () => {
 
         <Route element={<ProtectedRoute allowedRoles={['USER']} />}>
           <Route path="upload" element={<UploadDocumentPage />} />
-          <Route path="collections/:id" element={<CollectionPage />} />
         </Route>
       </Route>
 

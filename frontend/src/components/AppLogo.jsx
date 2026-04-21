@@ -11,7 +11,7 @@ const AppLogo = ({ className = '', alwaysFull = false }) => {
         className={`${alwaysFull ? 'flex' : 'hidden sm:flex '}
         flex-row text-xl text-center font-bold`}
       >
-        <span className="textblack">Document</span>
+        <span className="text-black">Document</span>
         <span className="text-blue-500">Hub</span>
       </div>
     </Link>
