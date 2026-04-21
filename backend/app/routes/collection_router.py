@@ -11,6 +11,7 @@ from app.schemas.collection_schema import *
 from app.schemas.document_schema import DocumentSummarySchema
 from app.services.auth_service import CurrentUserDep
 from app.services.collection_service import CollectionServiceDep
+from app.services.storage_service import StorageServiceDep
 
 router = APIRouter(prefix="/collections", tags=["Collections"])
 
@@ -47,21 +48,25 @@ def get_documents_in_collection(
     current_user: CurrentUserDep,
     collection_id: int,
     collection_service: CollectionServiceDep,
+    storage_service: StorageServiceDep,
     query: Annotated[CollectionItemQuery, Query()],
 ):
-    documents, total = collection_service.list_document(
+    docs, total = collection_service.list_document(
         user=current_user,
         collection_id=int(collection_id),
         keyword=query.q,
         page=query.page,
         limit=query.limit,
     )
-    res = [DocumentSummarySchema.model_validate(obj) for obj in documents]
+    res_data = [
+        DocumentSummarySchema.build(doc, storage_service.generate_document_url(doc)[0])
+        for doc in docs
+    ]
     return APIResponse.paginate(
         current_page=query.page,
         per_page=query.limit,
         total_items=total,
-        data=res,
+        data=res_data,
     )
 
 

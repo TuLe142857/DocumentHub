@@ -63,13 +63,15 @@ def update_self_profile(
     return APIResponse.ok(message=f"{profile_update_dict}")
 
 
-@router.put("/me/avatar",
-            response_model=ResponseSuccessSchema,
-            responses=build_error_docs(
-                ErrorCode.UNAUTHORIZED,
-                ErrorCode.VALIDATION_ERROR,
-            ),
-            summary="Update self avatar")
+@router.put(
+    "/me/avatar",
+    response_model=ResponseSuccessSchema,
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.VALIDATION_ERROR,
+    ),
+    summary="Update self avatar",
+)
 def update_avatar(
     form: Annotated[AvatarUpdateRequest, Form(media_type="multipart/form-data")],
     current_user: CurrentUserDep,
@@ -82,7 +84,8 @@ def update_avatar(
 
 
 @router.get(
-    "/me/documents", response_model=ResponsePaginationSchema[DocumentSummarySchema],
+    "/me/documents",
+    response_model=ResponsePaginationSchema[DocumentSummarySchema],
     responses=build_error_docs(
         ErrorCode.UNAUTHORIZED,
         ErrorCode.VALIDATION_ERROR,
@@ -117,7 +120,7 @@ def get_self_documents(
         ErrorCode.UNAUTHORIZED,
         ErrorCode.VALIDATION_ERROR,
     ),
-    summary="Get self collections"
+    summary="Get self collections",
 )
 def get_self_collections(
     current_user: CurrentUserDep,
@@ -145,7 +148,7 @@ def get_self_collections(
 @router.get(
     "/{username}/profile",
     response_model=ResponseSuccessSchema[UserPublicProfileSchema],
-    summary="Select other user's profile"
+    summary="Select other user's profile",
 )
 def get_userprofile(
     username: str,
@@ -168,12 +171,16 @@ def get_user_documents(
     username: str,
     query: Annotated[DocumentPublicQuery, Query()],
     document_service: DocumentServiceDep,
+    storage_service: StorageServiceDep,
 ):
     docs, total = document_service.get_public_documents(
         owner_name=username, **query.model_dump(exclude_none=True)
     )
 
-    res_data = [DocumentSummarySchema.model_validate(doc) for doc in docs]
+    res_data = [
+        DocumentSummarySchema.build(doc, storage_service.generate_document_url(doc)[0])
+        for doc in docs
+    ]
     return APIResponse.paginate(
         current_page=query.page,
         per_page=query.limit,
