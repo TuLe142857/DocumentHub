@@ -1,6 +1,7 @@
 import datetime
-from typing import Annotated, Any
 import re
+from typing import Annotated, Any
+
 from fastapi import UploadFile
 from pydantic import (
     AfterValidator,
@@ -16,6 +17,7 @@ from app.core import AppException, ErrorCode, PaginationQuery, get_settings
 from app.models import DocumentStatus, DocumentVisibility
 from app.utils import get_file_extension
 
+
 def validate_file(file: UploadFile) -> UploadFile:
     filename = file.filename
 
@@ -27,8 +29,11 @@ def validate_file(file: UploadFile) -> UploadFile:
         raise AppException(ErrorCode.VALIDATION_ERROR, "Can not detect file extension")
 
     settings = get_settings()
-    if not extension in settings.SUPPORTED_FILE_TYPE:
-        raise AppException(ErrorCode.UNSUPPORTED_FILE_TYPE, f"File extension {extension} not supported. Supported file extension: {settings.SUPPORTED_FILE_TYPE}")
+    if extension not in settings.SUPPORTED_FILE_TYPE:
+        raise AppException(
+            ErrorCode.VALIDATION_ERROR,
+            f"File extension {extension} not supported. Supported file extension: {settings.SUPPORTED_FILE_TYPE}",
+        )
 
     return file
 
@@ -36,16 +41,26 @@ def validate_file(file: UploadFile) -> UploadFile:
 def validate_tag_name(tag_name: str) -> str:
     tag_name = tag_name.strip()
     if len(tag_name) >= 50:
-        raise AppException(ErrorCode.VALIDATION_ERROR, "Tag name too long, max 50 characters")
+        raise AppException(
+            ErrorCode.VALIDATION_ERROR, "Tag name too long, max 50 characters"
+        )
     if len(tag_name) == 0:
         raise AppException(ErrorCode.VALIDATION_ERROR, "Tag name cannot be empty")
-    if (not re.fullmatch(r"[a-z0-9-_]+", tag_name)) or tag_name.startswith('-') or tag_name.startswith('_'):
-        raise AppException(ErrorCode.VALIDATION_ERROR,
-                           "Invalid tag name. Tag name can only contain 'a-z', '0-9', '-' and '_'. Tag name can not start with '-' or '_'")
+    if (
+        (not re.fullmatch(r"[a-z0-9-_]+", tag_name))
+        or tag_name.startswith("-")
+        or tag_name.startswith("_")
+    ):
+        raise AppException(
+            ErrorCode.VALIDATION_ERROR,
+            "Invalid tag name. Tag name can only contain 'a-z', '0-9', '-' and '_'. Tag name can not start with '-' or '_'",
+        )
     return tag_name
+
 
 def validate_tag_name_list(tag_names: list[str]) -> list[str]:
     return [validate_tag_name(t) for t in tag_names]
+
 
 class DocumentUploadRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -77,11 +92,15 @@ class DocumentUpdateRequest(BaseModel):
     desc: Annotated[str | None, Field(default=None)]
     category_id: Annotated[int | None, Field(default=None)]
     visibility: Annotated[DocumentVisibility | None, Field(default=None)]
-    tags: Annotated[list[str] | None, Field(default=None), AfterValidator(validate_tag_name_list)]
+    tags: Annotated[
+        list[str] | None, Field(default=None), AfterValidator(validate_tag_name_list)
+    ]
+
 
 class DocumentTagSchema(BaseModel):
     model_config = ConfigDict(extra="forbid")
     tag_name: Annotated[str, Field(), AfterValidator(validate_tag_name)]
+
 
 class DocumentPublicQuery(PaginationQuery):
     """

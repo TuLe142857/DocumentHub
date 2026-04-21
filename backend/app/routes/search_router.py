@@ -2,14 +2,18 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from app.core import APIResponse, ResponsePaginationSchema
+from app.core import APIResponse, ErrorCode, ResponsePaginationSchema, build_error_docs
 from app.schemas.document_schema import DocumentPublicQuery, DocumentSummarySchema
 from app.services.document_service import DocumentServiceDep
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
 
-@router.get("", response_model=ResponsePaginationSchema[DocumentSummarySchema])
+@router.get(
+    "",
+    response_model=ResponsePaginationSchema[DocumentSummarySchema],
+    responses=build_error_docs(ErrorCode.VALIDATION_ERROR),
+)
 def search(
     query: Annotated[DocumentPublicQuery, Query()], document_service: DocumentServiceDep
 ):

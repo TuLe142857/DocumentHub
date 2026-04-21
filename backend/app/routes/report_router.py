@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.core import APIResponse, ResponseSuccessSchema
+from app.core import APIResponse, ErrorCode, ResponseSuccessSchema, build_error_docs
 from app.schemas.report_schemas import ReportReasonSchema, ReportRequest
 from app.services.auth_service import CurrentUserDep
 from app.services.report_service import ReportServiceDep
@@ -18,7 +18,11 @@ def get_available_report_reasons(report_service: ReportServiceDep):
     return APIResponse.ok(res_data)
 
 
-@router.post("/documents/{document_id}", response_model=ResponseSuccessSchema)
+@router.post(
+    "/documents/{document_id}",
+    response_model=ResponseSuccessSchema,
+    responses=build_error_docs(ErrorCode.VALIDATION_ERROR),
+)
 def report_document(
     document_id: int,
     body: ReportRequest,

@@ -4,8 +4,10 @@ from fastapi import APIRouter, Form, Query
 
 from app.core import (
     APIResponse,
+    ErrorCode,
     ResponsePaginationSchema,
     ResponseSuccessSchema,
+    build_error_docs,
 )
 from app.schemas.collection_schema import CollectionQuery, CollectionSchema
 from app.schemas.document_schema import (
@@ -28,7 +30,10 @@ router = APIRouter(prefix="/users", tags=["User"])
 
 
 @router.get(
-    "/me/profile", response_model=ResponseSuccessSchema[UserPublicProfileSchema]
+    "/me/profile",
+    response_model=ResponseSuccessSchema[UserPublicProfileSchema],
+    responses=build_error_docs(ErrorCode.UNAUTHORIZED),
+    summary="Get self profile",
 )
 def get_self_profile(
     current_user: CurrentUserDep,
@@ -39,7 +44,15 @@ def get_self_profile(
     return APIResponse.ok(data=res)
 
 
-@router.patch("/me/profile", response_model=ResponseSuccessSchema)
+@router.patch(
+    "/me/profile",
+    response_model=ResponseSuccessSchema,
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.VALIDATION_ERROR,
+    ),
+    summary="Update self profile",
+)
 def update_self_profile(
     body: UserProfileUpdateRequest,
     current_user: CurrentUserDep,
@@ -50,7 +63,13 @@ def update_self_profile(
     return APIResponse.ok(message=f"{profile_update_dict}")
 
 
-@router.put("/me/avatar", response_model=ResponseSuccessSchema)
+@router.put("/me/avatar",
+            response_model=ResponseSuccessSchema,
+            responses=build_error_docs(
+                ErrorCode.UNAUTHORIZED,
+                ErrorCode.VALIDATION_ERROR,
+            ),
+            summary="Update self avatar")
 def update_avatar(
     form: Annotated[AvatarUpdateRequest, Form(media_type="multipart/form-data")],
     current_user: CurrentUserDep,
@@ -63,7 +82,11 @@ def update_avatar(
 
 
 @router.get(
-    "/me/documents", response_model=ResponsePaginationSchema[DocumentSummarySchema]
+    "/me/documents", response_model=ResponsePaginationSchema[DocumentSummarySchema],
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.VALIDATION_ERROR,
+    ),
 )
 def get_self_documents(
     current_user: CurrentUserDep,
@@ -90,6 +113,11 @@ def get_self_documents(
 @router.get(
     "/me/collections",
     response_model=ResponsePaginationSchema[CollectionSchema],
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.VALIDATION_ERROR,
+    ),
+    summary="Get self collections"
 )
 def get_self_collections(
     current_user: CurrentUserDep,
@@ -115,7 +143,9 @@ def get_self_collections(
 
 
 @router.get(
-    "/{username}/profile", response_model=ResponseSuccessSchema[UserPublicProfileSchema]
+    "/{username}/profile",
+    response_model=ResponseSuccessSchema[UserPublicProfileSchema],
+    summary="Select other user's profile"
 )
 def get_userprofile(
     username: str,
@@ -129,6 +159,9 @@ def get_userprofile(
 @router.get(
     "/{username}/documents",
     response_model=ResponsePaginationSchema[DocumentSummarySchema],
+    responses=build_error_docs(
+        ErrorCode.VALIDATION_ERROR,
+    ),
     summary="Select other user's Public && Active documents",
 )
 def get_user_documents(

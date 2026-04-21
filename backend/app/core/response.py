@@ -32,6 +32,56 @@ class ResponseErrorSchema(BaseModel):
     ]
 
 
+def build_error_docs(
+    *errors: ErrorCode | tuple[ErrorCode, str],
+) -> dict[int, dict[str, Any]]:
+    """
+     Build OpenAPI-compatible error response documentation for FastAPI endpoints
+    Args:
+        *errors: list of [ErrorCode | tuple[ErrorCode, message]]
+
+    Returns:
+        A dictionary mapping HTTP status codes to their OpenAPI response definitions.
+
+    Examples:
+        >>> from fastapi import APIRouter
+        >>> from app.core import ResponseSuccessSchema, APIResponse, ErrorCode, build_error_docs
+        >>> router = APIRouter()
+        >>>
+        >>> @router.get(
+        >>>     "/data",
+        >>>     response_model=ResponseSuccessSchema,
+        >>>     responses = build_error_docs(ErrorCode.VALIDATION_ERROR)
+        >>> )
+        >>> def some_func():
+        >>>     pass
+    """
+    responses: dict[int, dict[str, Any]] = {}
+
+    for item in errors:
+        if isinstance(item, ErrorCode):
+            err = item
+            msg = err.name.replace("_", " ").capitalize()
+        else:
+            err, msg = item
+
+        status = err.status_code
+
+        if status not in responses:
+            responses[status] = {
+                "description": f"Error {status}",
+                "model": ResponseErrorSchema,
+                "content": {"application/json": {"examples": {}}},
+            }
+
+        responses[status]["content"]["application/json"]["examples"][err.error_code] = {
+            "summary": err.error_code,
+            "value": {"success": False, "error_code": err.error_code, "message": msg},
+        }
+
+    return responses
+
+
 # For pagination
 class PaginationMeta(BaseModel):
     """

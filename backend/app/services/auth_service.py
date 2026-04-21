@@ -95,12 +95,14 @@ class AuthService:
 
     def request_registration(self, email: str):
         """
-        Frist step of registration. Generate and send OTP code to email.
+        First step of registration. Generate and send OTP code to email.
         Args:
             email: email use to register new user account.
 
         Returns:
 
+        Raises:
+            ErrorCode.RESOURCE_ALREADY_EXISTS: Email already exists
         """
         if self.crud_user.get_by_identity(email) is not None:
             raise AppException(
@@ -267,6 +269,9 @@ class AuthService:
         Generate OTP incase user forgot password and want to reset.OTP will be sent to user email.
         Args:
             identity: email or username
+        Raises:
+            ErrorCode.INVALID_CREDENTIALS: user not found
+
         """
         user = self.crud_user.get_by_identity(identity)
         if not user:
@@ -286,6 +291,9 @@ class AuthService:
             identity: email or username
             otp_code: OTP code that user received via email.
             new_password: new password
+        Raises:
+            ErrorCode.INVALID_CREDENTIALS: user not found
+            ErrorCode.INVALID_CODE: OTP code not matched or expired
         """
         user = self.crud_user.get_by_identity(identity)
         if not user:

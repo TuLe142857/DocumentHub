@@ -1,9 +1,6 @@
 from fastapi import APIRouter, Body, Form, Query
 
-from app.core import (
-    APIResponse,
-    ResponseSuccessSchema,
-)
+from app.core import APIResponse, ErrorCode, ResponseSuccessSchema, build_error_docs
 from app.schemas.document_schema import *
 from app.services.auth_service import (
     CurrentUserDep,
@@ -41,6 +38,12 @@ def get_max_supported_document_size_bytes():
 @router.post(
     "",
     response_model=ResponseSuccessSchema,
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        (ErrorCode.RESOURCE_ALREADY_EXISTS, "Document title already exists."),
+        (ErrorCode.RESOURCE_NOT_FOUND, "Category not found"),
+        ErrorCode.VALIDATION_ERROR,
+    ),
     summary="Upload document. Require login",
     description="Upload a new document.",
 )
@@ -66,6 +69,12 @@ def upload_document(
 @router.get(
     "/{document_id}",
     response_model=ResponseSuccessSchema[DocumentDetailsSchema],
+    responses=build_error_docs(
+        ErrorCode.RESOURCE_NOT_FOUND,
+        ErrorCode.RESOURCE_NOT_AVAILABLE,
+        ErrorCode.FORBIDDEN,
+        ErrorCode.VALIDATION_ERROR,
+    ),
     summary="Get document details",
     description="Retrieve detailed information of a specific document.",
 )
@@ -96,6 +105,11 @@ def get_document_details(
 @router.patch(
     "/{document_id}",
     response_model=ResponseSuccessSchema[DocumentUpdateRequest],
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.FORBIDDEN,
+        ErrorCode.VALIDATION_ERROR,
+    ),
     summary="Update document",
 )
 def update_document(
@@ -114,6 +128,12 @@ def update_document(
 @router.delete(
     "/{document_id}",
     response_model=ResponseSuccessSchema,
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.RESOURCE_NOT_FOUND,
+        ErrorCode.FORBIDDEN,
+        ErrorCode.VALIDATION_ERROR,
+    ),
     summary="Move document to trash",
     description="Soft delete a document. It can be restored before permanent deletion.",
 )
@@ -129,6 +149,12 @@ def delete_document(
 @router.post(
     "/{document_id}/restore",
     response_model=ResponseSuccessSchema,
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.RESOURCE_NOT_FOUND,
+        ErrorCode.FORBIDDEN,
+        ErrorCode.VALIDATION_ERROR,
+    ),
     summary="Restore document",
     description="Restore a document from the trash.",
 )
@@ -144,6 +170,12 @@ def restore_document(
 @router.put(
     "/{document_id}/tags",
     response_model=ResponseSuccessSchema,
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.RESOURCE_NOT_FOUND,
+        ErrorCode.FORBIDDEN,
+        ErrorCode.VALIDATION_ERROR,
+    ),
     summary="Add tag to document",
 )
 def add_tag(
@@ -161,6 +193,12 @@ def add_tag(
 @router.delete(
     "/{document_id}/tags",
     response_model=ResponseSuccessSchema,
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.RESOURCE_NOT_FOUND,
+        ErrorCode.FORBIDDEN,
+        ErrorCode.VALIDATION_ERROR,
+    ),
     summary="Remove tag from document",
 )
 def remove_tag(
@@ -178,6 +216,12 @@ def remove_tag(
 @router.put(
     "/{document_id}/like",
     response_model=ResponseSuccessSchema,
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.RESOURCE_NOT_FOUND,
+        ErrorCode.FORBIDDEN,
+        ErrorCode.VALIDATION_ERROR,
+    ),
     summary="Like document",
     description="Mark a document as liked by the current user.",
 )
@@ -191,6 +235,12 @@ def like_document(
 @router.delete(
     "/{document_id}/like",
     response_model=ResponseSuccessSchema,
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.RESOURCE_NOT_FOUND,
+        ErrorCode.FORBIDDEN,
+        ErrorCode.VALIDATION_ERROR,
+    ),
     summary="Unlike document",
     description="Remove like from a document.",
 )
@@ -204,6 +254,12 @@ def unlike_document(
 @router.get(
     "/{document_id}/download",
     response_model=ResponseSuccessSchema[str],
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.RESOURCE_NOT_FOUND,
+        ErrorCode.FORBIDDEN,
+        ErrorCode.VALIDATION_ERROR,
+    ),
     summary="Download document",
     description="Download a document in the specified format. Response data is a url for download.",
 )
@@ -224,6 +280,12 @@ def download_document(
 @router.put(
     "/{document_id}/collections",
     response_model=ResponseSuccessSchema,
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.RESOURCE_NOT_FOUND,
+        ErrorCode.FORBIDDEN,
+        ErrorCode.VALIDATION_ERROR,
+    ),
     summary="Sync document collections",
     description=(
         "Synchronize the list of collections for a document."

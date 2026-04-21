@@ -75,6 +75,18 @@ class CollectionService:
         return res, total
 
     def create_collection(self, owner_id: int, name: str):
+        """
+        Create new collections
+        Args:
+            owner_id:
+            name:
+
+        Returns:
+
+        Raises:
+            ErrorCode.RESOURCE_ALREADY_EXISTS: collection name already exists
+
+        """
         if self.crud_collection.select(owner_id=owner_id, name=name) is not None:
             raise AppException(
                 ErrorCode.RESOURCE_ALREADY_EXISTS, "Collection already exists"
@@ -89,6 +101,20 @@ class CollectionService:
         page: int = 1,
         limit: int = 10,
     ) -> tuple[Sequence[Document], int]:
+        """
+
+        Args:
+            user:
+            collection_id:
+            keyword:
+            page:
+            limit:
+
+        Returns:
+
+        Raises:
+            ErrorCode.RESOURCE_NOT_FOUND: collection not found
+        """
         collection = self.crud_collection.get(
             collection_id,
             on_not_found=AppException(
@@ -126,23 +152,59 @@ class CollectionService:
         return res, count
 
     def rename_collection(self, user: User, collection_id: int, new_name: str):
+        """
+
+        Args:
+            user:
+            collection_id:
+            new_name:
+
+        Returns:
+
+        Raises:
+            ErrorCode.RESOURCE_NOT_FOUND: collection not found
+            ErrorCode.RESOURCE_ALREADY_EXISTS: Collection new_name already exists
+            ErrorCode.FORBIDDEN: User not have permission to update collection
+        """
         collection = self.crud_collection.get(
             collection_id,
             on_not_found=AppException(
                 ErrorCode.RESOURCE_NOT_FOUND, "Collection not found"
             ),
         )
-
         err = self.access_control.can_update_collection(user, collection)
         if err is not None:
             raise err
+
+        if collection.name == new_name:
+            return
+        if (
+            self.db_session.execute(
+                select(Collection).where(Collection.name == new_name)
+            ).scalar_one_or_none()
+            is not None
+        ):
+            raise AppException(
+                ErrorCode.RESOURCE_ALREADY_EXISTS, "Collection name already exists"
+            )
 
         self.crud_collection.update(collection, {"name": new_name})
 
     def add_document_to_collection(
         self, user: User, collection_id: int, document_id: int
     ):
+        """
 
+        Args:
+            user:
+            collection_id:
+            document_id:
+
+        Returns:
+        Raises:
+            ErrorCode.RESOURCE_NOT_FOUND: collection/document not found
+            ErrorCode.FORBIDDEN: user does not have permission do to this action
+        """
         collection = self.crud_collection.get(
             collection_id,
             on_not_found=AppException(
@@ -168,6 +230,18 @@ class CollectionService:
     def sync_document_collections(
         self, user: User, document_id, collection_ids: list[int]
     ):
+        """
+
+        Args:
+            user:
+            document_id:
+            collection_ids:
+
+        Returns:
+        Raises:
+            ErrorCode.RESOURCE_NOT_FOUND: collection/document not found
+            ErrorCode.FORBIDDEN: user does not have permission do to this action
+        """
         collections = [
             self.crud_collection.get(
                 collection_id,
@@ -218,6 +292,17 @@ class CollectionService:
         self.crud_collection.remove_document(collection, document_id)
 
     def delete_collection(self, user: User, collection_id: int):
+        """
+
+        Args:
+            user:
+            collection_id:
+
+        Returns:
+        Raises:
+            ErrorCode.RESOURCE_NOT_FOUND: Collection not found
+            ErrorCode.FORBIDDEN: User not have permission to delete collection
+        """
         collection = self.crud_collection.get(
             collection_id,
             on_not_found=AppException(

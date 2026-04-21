@@ -14,7 +14,10 @@ class AppException(Exception):
         message: str | None = None,
     ):
         self.__error_code = error_code
-        self.__message = message
+        if message is not None:
+            self.__message = message
+        else:
+            self.__message = error_code.name.lower().replace("_", " ").capitalize()
 
     @property
     def error_code(self) -> ErrorCode:

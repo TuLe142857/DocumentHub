@@ -270,6 +270,48 @@ class DocumentService:
         file_type: str,
         content_type: str,
     ):
+        """
+
+        Args:
+            owner_id:
+            title:
+            category_id:
+            visibility:
+            desc:
+            tags:
+            file:
+            file_type:
+            content_type:
+
+        Returns:
+
+        Raises:
+            ErrorCode.RESOURCE_ALREADY_EXISTS:
+            ErrorCode.RESOURCE_NOT_FOUND: category not found
+        """
+
+        # check title
+        if (
+            self.db_session.execute(
+                select(Document).where(
+                    Document.owner_id == owner_id, Document.title == title
+                )
+            ).scalar_one_or_none()
+            is not None
+        ):
+            raise AppException(
+                ErrorCode.RESOURCE_ALREADY_EXISTS, "Document already exists"
+            )
+
+        # check category
+        if (
+            self.db_session.execute(
+                select(Category).where(Category.id == category_id)
+            ).scalar_one_or_none()
+            is None
+        ):
+            raise AppException(ErrorCode.RESOURCE_NOT_FOUND, "Category not found")
+
         random_uuid = str(uuid.uuid4())
         file_original_key = f"{random_uuid}/original"
         file_preview_key = f"{random_uuid}/preview"
@@ -316,6 +358,16 @@ class DocumentService:
         """
         Check permission and return document.
         Increase document view.
+        Args:
+            user: viewer
+            document_id: document.id
+
+        Returns:
+
+        Raises:
+            ErrorCode.RESOURCE_NOT_FOUND:
+            ErrorCode.RESOURCE_NOT_AVAILABLE:
+            ErrorCode.FORBIDDEN
         """
 
         document = self.crud_doc.get(
@@ -402,7 +454,24 @@ class DocumentService:
         tags: list[str] | None = None,
     ):
         """
-        Any param left default None value will be ignored.
+
+        Args:
+            user:
+            document_id:
+            desc:
+            title:
+            category_id:
+            visibility:
+            tags:
+
+        Returns:
+
+        Raises:
+            AppException: with the following ErrorCode
+
+                - ErrorCode.RESOURCE_NOT_FOUND:
+                - ErrorCode.FORBIDDEN:
+
         """
         document = self.crud_doc.get(
             document_id,

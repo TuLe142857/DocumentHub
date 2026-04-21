@@ -2,8 +2,10 @@ from fastapi import APIRouter, Body, Query
 
 from app.core import (
     APIResponse,
+    ErrorCode,
     ResponsePaginationSchema,
     ResponseSuccessSchema,
+    build_error_docs,
 )
 from app.schemas.collection_schema import *
 from app.schemas.document_schema import DocumentSummarySchema
@@ -13,7 +15,15 @@ from app.services.collection_service import CollectionServiceDep
 router = APIRouter(prefix="/collections", tags=["Collections"])
 
 
-@router.post("", response_model=ResponseSuccessSchema)
+@router.post(
+    "",
+    response_model=ResponseSuccessSchema,
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        (ErrorCode.RESOURCE_ALREADY_EXISTS, "Collection already exists."),
+        ErrorCode.VALIDATION_ERROR,
+    ),
+)
 def create_collection(
     current_user: CurrentUserDep,
     name: Annotated[str, Body(embed=True, alias="name")],
@@ -26,6 +36,11 @@ def create_collection(
 @router.get(
     "/{collection_id}/items",
     response_model=ResponsePaginationSchema[DocumentSummarySchema],
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        (ErrorCode.RESOURCE_NOT_FOUND, "Collection not found."),
+        ErrorCode.VALIDATION_ERROR,
+    ),
     summary="Get documents in collection",
 )
 def get_documents_in_collection(
@@ -50,7 +65,17 @@ def get_documents_in_collection(
     )
 
 
-@router.patch("/{collection_id}", response_model=ResponseSuccessSchema)
+@router.patch(
+    "/{collection_id}",
+    response_model=ResponseSuccessSchema,
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        (ErrorCode.RESOURCE_NOT_FOUND, "Collection not found."),
+        (ErrorCode.RESOURCE_ALREADY_EXISTS, "Collection name(new name) already exists"),
+        (ErrorCode.FORBIDDEN, "User not have permission to update collection"),
+        ErrorCode.VALIDATION_ERROR,
+    ),
+)
 def rename_collection(
     current_user: CurrentUserDep,
     collection_id: int,
@@ -63,7 +88,16 @@ def rename_collection(
     return APIResponse.ok()
 
 
-@router.delete("/{collection_id}", response_model=ResponseSuccessSchema)
+@router.delete(
+    "/{collection_id}",
+    response_model=ResponseSuccessSchema,
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        (ErrorCode.RESOURCE_NOT_FOUND, "Collection not found."),
+        (ErrorCode.FORBIDDEN, "User not have permission to delete collection"),
+        ErrorCode.VALIDATION_ERROR,
+    ),
+)
 def delete_collection(
     current_user: CurrentUserDep,
     collection_id: int,
@@ -77,7 +111,14 @@ def delete_collection(
 
 
 @router.put(
-    "/{collection_id}/items/{document_id}", response_model=ResponseSuccessSchema
+    "/{collection_id}/items/{document_id}",
+    response_model=ResponseSuccessSchema,
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.RESOURCE_NOT_FOUND,
+        ErrorCode.FORBIDDEN,
+        ErrorCode.VALIDATION_ERROR,
+    ),
 )
 def add_document_to_collection(
     current_user: CurrentUserDep,
@@ -94,7 +135,14 @@ def add_document_to_collection(
 
 
 @router.delete(
-    "/{collection_id}/items/{document_id}", response_model=ResponseSuccessSchema
+    "/{collection_id}/items/{document_id}",
+    response_model=ResponseSuccessSchema,
+    responses=build_error_docs(
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.RESOURCE_NOT_FOUND,
+        ErrorCode.FORBIDDEN,
+        ErrorCode.VALIDATION_ERROR,
+    ),
 )
 def remove_document_from_collection(
     current_user: CurrentUserDep,

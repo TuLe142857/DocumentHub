@@ -152,6 +152,16 @@ class AccessControlService:
     def can_update_collection(
         self, user: User, collection: Collection
     ) -> AppException | None:
+        """
+
+        Args:
+            user:
+            collection:
+
+        Returns:
+            - None if user has permission to update the collection
+            - ErrorCode.FORBIDDEN
+        """
         if collection.owner_id != user.id:
             return AppException(ErrorCode.FORBIDDEN)
         return None
@@ -159,6 +169,16 @@ class AccessControlService:
     def can_delete_collection(
         self, user: User, collection: Collection
     ) -> AppException | None:
+        """
+
+        Args:
+            user:
+            collection:
+
+        Returns:
+            - None if user has permission to delete the collection
+            - ErrorCode.FORBIDDEN
+        """
         if collection.owner_id != user.id:
             return AppException(ErrorCode.FORBIDDEN)
         return None
