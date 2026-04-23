@@ -49,7 +49,7 @@ class UserService:
             self.db_session.execute(
                 select(func.count()).select_from(stmt.subquery())
             ).scalar()
-            or None
+            or 0
         )
 
         if total_count == 0:

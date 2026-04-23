@@ -137,6 +137,20 @@ class DocumentOwnerQuery(PaginationQuery):
     visibility: Annotated[DocumentVisibility | None, Field(default=None)]
 
 
+class DocumentAdminQuery(PaginationQuery):
+    model_config = ConfigDict(extra="forbid")
+    q: Annotated[
+        str | None, Field(default=None, description="Search query, default None")
+    ]
+    owner: Annotated[str | None, Field(default=None, description="owner's username")]
+
+    status: Annotated[DocumentStatus | None, Field(default=None)]
+    visibility: Annotated[DocumentVisibility | None, Field(default=None)]
+    category_id: Annotated[
+        int | None, Field(default=None, description="Lọc theo ID danh mục")
+    ]
+
+
 class DocumentSummarySchema(BaseModel):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
 

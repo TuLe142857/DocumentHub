@@ -5,7 +5,7 @@ import uuid
 from fastapi import Depends
 from mypy_boto3_s3 import S3Client
 from redis import Redis
-from sqlalchemy import func, select, or_, and_
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode, get_settings
@@ -257,22 +257,73 @@ class DocumentService:
 
         return res, total
 
-    def get_liked_document(self, user_id: int, page:int=0, limit:int=10) -> tuple[Sequence[Document], int]:
+    def get_documents_by_admin(
+        self,
+        q: str | None = None,
+        owner_name: str | None = None,
+        category_id: int = None,
+        status: DocumentStatus | None = None,
+        visibility: DocumentVisibility | None = None,
+        page: int = 1,
+        limit: int = 20,
+    ) -> tuple[Sequence[Document], int]:
+        stmt = select(Document)
+        stmt = self._apply_filter(stmt, q=q)
+
+        if owner_name:
+            stmt = stmt.join(User, User.id == Document.owner_id).where(
+                User.username == owner_name
+            )
+        if status is not None:
+            stmt = stmt.where(Document.status == status)
+        if visibility is not None:
+            stmt = stmt.where(Document.visibility == visibility)
+        if category_id:
+            stmt = stmt.where(Document.category_id == category_id)
+
+        count = (
+            self.db_session.execute(
+                select(func.count()).select_from(stmt.subquery())
+            ).scalar()
+            or 0
+        )
+        if count == 0:
+            return list(), 0
+
+        stmt = stmt.offset((page - 1) * limit).limit(limit)
+
+        res = self.db_session.execute(stmt).scalars().all()
+        return res, count
+
+    def get_liked_document(
+        self, user_id: int, page: int = 0, limit: int = 10
+    ) -> tuple[Sequence[Document], int]:
         stmt = (
             select(Document)
-                .join(DocumentLike, DocumentLike.document_id == Document.id)
-                .where(DocumentLike.user_id == user_id)
-                .where(or_(
-                Document.owner_id == user_id,
-                and_(Document.status == DocumentStatus.READY, Document.visibility == DocumentVisibility.PUBLIC),
-            ))
+            .join(DocumentLike, DocumentLike.document_id == Document.id)
+            .where(DocumentLike.user_id == user_id)
+            .where(
+                or_(
+                    Document.owner_id == user_id,
+                    and_(
+                        Document.status == DocumentStatus.READY,
+                        Document.visibility == DocumentVisibility.PUBLIC,
+                    ),
+                )
+            )
         )
-        total = self.db_session.execute(select(func.count()).select_from(stmt.subquery())).scalar() or 0;
-        if total==0:
+        total = (
+            self.db_session.execute(
+                select(func.count()).select_from(stmt.subquery())
+            ).scalar()
+            or 0
+        )
+        if total == 0:
             return list(), 0
         stmt = stmt.offset((page - 1) * limit).limit(limit)
         res = self.db_session.execute(stmt).scalars().all()
         return res, total
+
     def create_document(
         self,
         owner_id: int,
@@ -371,8 +422,9 @@ class DocumentService:
 
     def view_document(self, user: User | None, document_id: int) -> Document:
         """
-        Check permission and return document.
-        Increase document view.
+        If user is admin, return document, not increase view,
+        else check permission and return document,
+        increase document view.
         Args:
             user: viewer
             document_id: document.id
@@ -398,6 +450,8 @@ class DocumentService:
             if err:
                 raise err
         else:
+            if user.role.name == "ADMIN":
+                return document
             # document view by user
             err = self.access_control.can_access_document(user, document)
             if err:
@@ -660,7 +714,7 @@ class DocumentService:
         document.banned_at = None
         moderation_log = ModerationLog(
             document_id=document_id,
-            admin_id=admin,
+            admin_id=admin.id,
             action=ModerationAction.UNBAN_DOCUMENT,
             note=note,
         )
@@ -724,7 +778,7 @@ class DocumentService:
             raise AppException(ErrorCode.RESOURCE_NOT_FOUND, "Category does not exist")
 
         is_used = self.db_session.execute(
-            select(Document).where(Document.category_id == category_id)
+            select(Document).where(Document.category_id == category_id).limit(1)
         ).scalar_one_or_none()
 
         if is_used:

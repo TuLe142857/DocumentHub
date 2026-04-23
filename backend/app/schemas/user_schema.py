@@ -12,6 +12,7 @@ from app.utils import get_file_extension
 
 class UserPrivateProfileSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+    id: Annotated[int, Field()]
     username: Annotated[str, Field()]
     email: Annotated[str, Field()]
     is_active: Annotated[bool, Field()]

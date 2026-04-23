@@ -5,10 +5,10 @@ from fastapi import APIRouter, Form, Query
 from app.core import (
     APIResponse,
     ErrorCode,
+    PaginationQuery,
     ResponsePaginationSchema,
     ResponseSuccessSchema,
     build_error_docs,
-    PaginationQuery,
 )
 from app.schemas.collection_schema import CollectionQuery, CollectionSchema
 from app.schemas.document_schema import (
@@ -128,7 +128,9 @@ def get_liked_documents(
     document_service: DocumentServiceDep,
     storage_service: StorageServiceDep,
 ):
-    docs, total = document_service.get_liked_document(current_user.id, page=query.page, limit=query.limit);
+    docs, total = document_service.get_liked_document(
+        current_user.id, page=query.page, limit=query.limit
+    )
     res_data = [
         DocumentSummarySchema.build(doc, storage_service.generate_document_url(doc)[0])
         for doc in docs

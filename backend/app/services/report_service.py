@@ -63,28 +63,28 @@ class ReportService:
 
     def list_reported_documents(
         self, page: int, limit: int
-    ) -> tuple[Sequence[Document], int]:
+    ) -> tuple[Sequence[tuple[Document, int]], int]:
         stmt = (
-            select(Document)
+            select(Document, func.count(DocumentReport.id).label("report_count"))
             .join(DocumentReport)
             .where(DocumentReport.status == ReportStatus.PENDING)
-            .distinct()
+            .group_by(Document.id)
         )
 
         count = (
             self.db_session.execute(
                 select(func.count()).select_from(stmt.subquery())
-            ).scalars()
+            ).scalar()
             or 0
         )
         if count == 0:
             return [], 0
 
-        res = (
-            self.db_session.execute(stmt.offset((page - 1) * limit).limit(limit))
-            .scalars()
-            .all()
-        )
+        rows = self.db_session.execute(
+            stmt.offset((page - 1) * limit).limit(limit)
+        ).all()
+
+        res = [(r.Document, r.report_count) for r in rows]
 
         return res, count
 
