@@ -1,40 +1,58 @@
 import { useParams } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useState, useEffect, useCallback } from 'react';
 import api from '@/api/api.js';
+
 import Loading from '@/components/Loading.jsx';
-import DownloadButton from '@/pages/document/components/DownloadButton.jsx';
-import LikeButton from '@/pages/document/components/LikeButton.jsx';
-import AddToCollectionButton from '@/pages/document/components/AddToCollectionButton.jsx';
-import ReportButton from '@/pages/document/components/ReportButton.jsx';
-import EditButton from '@/pages/document/components/EditButton.jsx';
+import DocumentMetadata from '@/pages/document/components/DocumentMetadata.jsx';
+import DocumentAction from '@/pages/document/components/DocumentAction.jsx';
+import DocumentCard from '@/components/DocumentCard.jsx';
 
 const DocumentDetailPage = () => {
   const { id } = useParams();
-  const { user: currentUser, isAuthenticated } = useSelector(
-    (state) => state.user
-  );
   const [doc, setDoc] = useState(null);
-  const [showDesc, setShowDesc] = useState(false);
+  const [similarDocs, setSimilarDocs] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setError(null);
-      setLoading(true);
-      try {
-        const response = await api.get(`/documents/${id}`);
-        setDoc(response.data?.data);
-        console.log('document', response.data?.data);
-      } catch (err) {
-        setError(err.response.data?.message || err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+  const fetchDoc = useCallback(async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const response = await api.get(`/documents/${id}`);
+      setDoc(response.data?.data);
+      console.log('document', response.data?.data);
+    } catch (err) {
+      setError(err.response.data?.message || err);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
+
+  const fetchSimilarDocs = useCallback(async () => {
+    if (!doc) return;
+    try {
+      const params = new URLSearchParams();
+      params.set('page', '1');
+      params.set('limit', '10');
+      doc?.tags?.forEach((tag) => {
+        params.append('tags', tag);
+      });
+      const response = await api.get(`/search`, { params: params });
+      const docs = response.data?.data;
+      setSimilarDocs(docs.filter((d) => d.id !== doc.id));
+    } catch (err) {
+      console.log('err fetch similar', err);
+    }
+  }, [doc]);
+
+  useEffect(() => {
+    fetchDoc();
+  }, [fetchDoc]);
+
+  useEffect(() => {
+    fetchSimilarDocs();
+  }, [fetchSimilarDocs]);
 
   if (loading) {
     return <Loading />;
@@ -45,68 +63,46 @@ const DocumentDetailPage = () => {
   }
 
   return (
-    <div className="flex flex-row flex-1 bg-gray-100">
+    <div className="flex flex-col  sm:flex-row flex-1 min-h-screen  overflow-y-auto gap-2 p-2 bg-gray-100 ">
       {/*
-        DOCUMENT DETAILS
+        DOCUMENT
       */}
-      <div className="flex flex-col w-2/3 p-2">
-        {/* INFO BAR */}
-        <div>
-          <div className="flex flex-row p-2 rounded-sm justify-between gap-1 bg-sky-100 ">
-            <div className="flex text-lg font-bold  flex-col">
-              <div>{doc.title}</div>
-              <div className="text-sm">
-                Post by
-                <a href={`/users/${doc.owner}`}>{doc.owner}</a>
-              </div>
-            </div>
-            <div className="flex flex-row items-center gap-2">
-              <DownloadButton doc={doc} />
-              <LikeButton doc={doc} onUpdate={setDoc} />
-              <AddToCollectionButton doc={doc} />
-              <ReportButton doc={doc} />
-              {isAuthenticated &&
-                currentUser &&
-                currentUser.username === doc.owner && (
-                  <EditButton doc={doc} onChange={setDoc} />
-                )}
+      <div className="flex flex-col flex-1 min-h-0 h-fit gap-1 bg-white p-1 rounded-xl ">
+        <div className="flex flex-row p-2 rounded-sm justify-between gap-1">
+          <div className="flex font-bold gap-1 flex-col">
+            <div className="text-2xl">{doc.title}</div>
+            <div className="text-sm">
+              Post by
+              <a className="text-blue-500" href={`/users/${doc.owner}`}>
+                {' '}
+                {doc.owner}
+              </a>
             </div>
           </div>
-
-          <div className="flex flex-wrap">
-            {doc &&
-              doc?.tags?.map((tag) => (
-                <div className="text-sm text-blue-500 font-semibold m-1 p-2 bg-sky-200/50 rounded-2xl">
-                  #{tag}
-                </div>
-              ))}
-          </div>
-          {/*DESC*/}
-          <div className="flex flex-row gap-x-1">
-            <div>Description </div>
-            {doc.desc ? (
-              <div onClick={() => setShowDesc(!showDesc)}>
-                {showDesc ? 'hide' : 'show'}
-              </div>
-            ) : (
-              <div>No description</div>
-            )}
-          </div>
-          {showDesc && <div>{doc.desc}</div>}
+          <DocumentAction
+            doc={doc}
+            onChange={setDoc}
+            className="items-center gap-2"
+          />
         </div>
 
-        {/* PREVIEW */}
-        <iframe
-          src={doc.file_preview_url}
-          className="flex h-screen flex-1"
-        ></iframe>
+        <DocumentMetadata
+          doc={doc}
+          className="rounded-md bg-white shadow-sm p-2"
+        />
+
+        <iframe src={doc.file_preview_url} className="h-150  w-full"></iframe>
       </div>
 
       {/*
         RECOMMEND SIMILAR
       */}
-      <div className="flex flex-col flex-1 bg-green-200">
+      <div className="flex flex-col items-center bg-white gap-1  rounded-xl p-2 ">
         <div className="text-xl font-bold text-black p-2">Similar Document</div>
+        {similarDocs &&
+          similarDocs.map((doc) => (
+            <DocumentCard document={doc} key={doc.id} />
+          ))}
       </div>
     </div>
   );

@@ -49,7 +49,7 @@ const FormFooter = ({ onSubmit, onCancel }) => (
  * @constructor
  */
 const DocumentEditForm = ({ doc, onCancel, onUpdate, className }) => {
-  const [formData, setformData] = useState({
+  const [formData, setFormData] = useState({
     desc: doc.desc || null,
     title: doc.title || null,
     category_id: doc?.category_id,
@@ -77,7 +77,7 @@ const DocumentEditForm = ({ doc, onCancel, onUpdate, className }) => {
 
   const handleFormChange = (e) => {
     e.preventDefault();
-    setformData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
   const handleSubmit = async () => {
     // check diff .....
@@ -137,10 +137,10 @@ const DocumentEditForm = ({ doc, onCancel, onUpdate, className }) => {
         <TagInput
           tags={formData.tags}
           onAdd={(t) =>
-            setformData((prev) => ({ ...prev, tags: [...prev.tags, t] }))
+            setFormData((prev) => ({ ...prev, tags: [...prev.tags, t] }))
           }
           onRemove={(t) =>
-            setformData((prev) => ({
+            setFormData((prev) => ({
               ...prev,
               tags: prev.tags.filter((item) => item !== t),
             }))

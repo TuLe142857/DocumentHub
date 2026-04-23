@@ -52,11 +52,12 @@ const DocumentReportForm = ({ doc, onCancel, onSuccess, className }) => {
         isLoading: false,
         autoClose: 2000,
       });
-      onSuccess();
-      onCancel();
+      onSuccess && onSuccess();
+      onCancel && onCancel();
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
+        err.message ||
         'Something went wrong, please try again';
       toast.update(toast_id, {
         type: 'error',

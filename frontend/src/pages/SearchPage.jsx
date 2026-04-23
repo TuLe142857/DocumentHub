@@ -81,7 +81,8 @@ const ActiveFilters = ({
 
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const selectedCategories = searchParams.getAll('category_ids')?.map(Number) || [];
+  const selectedCategories =
+    searchParams.getAll('category_ids')?.map(Number) || [];
   const selectedTags = searchParams.getAll('tags') || [];
 
   const [categories, setCategories] = useState([]);

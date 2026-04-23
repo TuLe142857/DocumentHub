@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
@@ -8,6 +9,7 @@ import AppLogo from '@/components/AppLogo.jsx';
 
 const LoginPage = () => {
   const dispatch = useDispatch(); // redux
+  const { user, isAuthenticated } = useSelector((state) => state.user);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -19,6 +21,16 @@ const LoginPage = () => {
     password: searchParams.get('password'),
   });
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (user.role === 'ADMIN') {
+      navigate('/admin');
+    } else {
+      navigate('/');
+    }
+  }, [user, isAuthenticated, navigate]);
+
   const handleChange = (e) => {
     setLoginData({ ...loginData, [e.target.name]: e.target.value });
   };
@@ -33,7 +45,7 @@ const LoginPage = () => {
       toast.success('Login successful!', {
         autoClose: 2000,
       });
-      setTimeout(() => navigate('/'), 500);
+      // setTimeout(() => navigate('/'), 500);
     } catch (err) {
       setError(err.response.data?.message);
     } finally {

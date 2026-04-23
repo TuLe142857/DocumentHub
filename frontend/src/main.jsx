@@ -7,7 +7,7 @@ import './index.css';
 import App from './App.jsx';
 import ModalProvider from '@/modal/ModalProvider.jsx';
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
+  // <StrictMode>
     <ModalProvider>
       <Provider store={store}>
         <BrowserRouter>
@@ -15,5 +15,5 @@ createRoot(document.getElementById('root')).render(
         </BrowserRouter>
       </Provider>
     </ModalProvider>
-  </StrictMode>
+  // </StrictMode>
 );

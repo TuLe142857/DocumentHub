@@ -26,16 +26,14 @@ const Header = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchKeyWord.trim()) {
-      if (location.pathname === '/search') {
-        const params = new URLSearchParams(searchParams);
-        params.set('q', searchKeyWord);
-        setSearchParams(params);
-      } else {
-        const params = new URLSearchParams();
-        params.set('q', searchKeyWord);
-        navigate(`/search?${params.toString()}`);
-      }
+    if (location.pathname === '/search') {
+      const params = new URLSearchParams(searchParams);
+      params.set('q', searchKeyWord.trim());
+      setSearchParams(params);
+    } else {
+      const params = new URLSearchParams();
+      params.set('q', searchKeyWord.trim());
+      navigate(`/search?${params.toString()}`);
     }
   };
 

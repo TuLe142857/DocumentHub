@@ -11,6 +11,11 @@ import UploadDocumentPage from '@/pages/UploadDocumentPage.jsx';
 import DocumentDetailPage from '@/pages/document/DocumentDetailPage.jsx';
 import SearchPage from '@/pages/SearchPage.jsx';
 import UserProfilePage from '@/pages/user/UserProfilePage.jsx';
+import AdminDashboard from '@/pages/admin/AdminDashboard.jsx';
+import AdminUserManagement from '@/pages/admin/AdminUserManagement.jsx';
+import AdminCategoryManagement from '@/pages/admin/AdminCategoryManagement.jsx';
+import AdminDocumentManagement from '@/pages/admin/AdminDocumentManagement.jsx';
+import AdminReportManagement from '@/pages/admin/AdminReportManagement.jsx';
 
 const AppRoutes = () => {
   return (
@@ -49,12 +54,16 @@ const AppRoutes = () => {
       */}
       <Route
         path="/admin"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <AdminLayout />
-          </ProtectedRoute>
-        }
-      ></Route>
+        element={<ProtectedRoute allowedRoles={['ADMIN']} />}
+      >
+        <Route element={<AdminLayout />}>
+          <Route index={true} element={<AdminDashboard />} />
+          <Route path={'users'} element={<AdminUserManagement />} />
+          <Route path={'categories'} element={<AdminCategoryManagement />} />
+          <Route path={'reports'} element={<AdminReportManagement />} />
+          <Route path={'documents'} element={<AdminDocumentManagement />} />
+        </Route>
+      </Route>
 
       {/*
           ON NOT FOUND PAGE
