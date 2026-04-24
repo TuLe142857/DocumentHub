@@ -13,8 +13,14 @@ const authApi = {
   completeRegister: (payload) => api.post('/auth/register/complete', payload),
 
   // ForgotPassword flow
-  forgotPassword: (payload) => api.post('/auth/forgot_password', payload),
-  resetPassword: (payload) => api.post('/auth/reset_password', payload),
+  forgotPassword: (identity) =>
+    api.post('/auth/forgot_password', { identity: identity }),
+  resetPassword: (identity, otp_code, new_password) =>
+    api.post('/auth/reset_password', {
+      identity: identity,
+      otp_code: otp_code,
+      new_password: new_password,
+    }),
 };
 
 export default authApi;

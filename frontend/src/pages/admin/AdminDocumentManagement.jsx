@@ -2,7 +2,7 @@ import adminApi from '@/api/adminApi.js';
 import { useState, useEffect, useCallback } from 'react';
 import PageNavigation from '@/components/PageNavigation.jsx';
 import usePagination from '@/hooks/usePagination.jsx';
-import {toast} from "react-toastify";
+import { toast } from 'react-toastify';
 const AdminDocumentManagement = () => {
   const [search, setSearch] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
@@ -61,26 +61,29 @@ const AdminDocumentManagement = () => {
   }, [search, setPage]);
 
   const handeUnbanDocument = async (id) => {
-    if (!confirm("Confirm unban this document?")) {
+    if (!confirm('Confirm unban this document?')) {
       return;
     }
-    const toastId = toast.loading("waiting...");
-    try{
-      await  adminApi.unbanDocument(id);
+    const toastId = toast.loading('waiting...');
+    try {
+      await adminApi.unbanDocument(id);
       toast.update(toastId, {
         type: 'success',
-        render: "Success",
+        render: 'Success',
         isLoading: false,
         autoClose: 500,
-      })
-    }catch (err) {
-      const msg = err?.response?.data?.message || err?.message || "Something went wrong, please try again later";
+      });
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Something went wrong, please try again later';
       toast.update(toastId, {
-        type: "error",
+        type: 'error',
         render: msg,
         isLoading: false,
-        autoClose: 500
-      })
+        autoClose: 500,
+      });
     }
   };
 

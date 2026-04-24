@@ -21,40 +21,65 @@ const AppRoutes = () => {
   return (
     <Routes>
       {/*
-          PUBLIC PAGES
-          - Allow both users & guest
+          PUBLIC ROUTE
       */}
       <Route path="login" element={<LoginPage />} />
       <Route path="register" element={<RegisterPage />} />
       <Route path="forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="users/:username" element={<UserProfilePage />} />
-      {/*
-          USER PAGES
-          - Required login
-          - When not login, redirect to login page
-      */}
 
-      <Route element={<ProtectedRoute allowedRoles={['USER']} />}></Route>
+      <Route
+        element={
+          <ProtectedRoute
+            allowedRoles={['GUEST', 'USER']}
+            roleRedirect={new Map([['ADMIN', '/admin']])}
+          />
+        }
+      >
+        <Route path="users/:username" element={<UserProfilePage />} />
+      </Route>
 
       <Route element={<PublicLayout />}>
-        <Route index={true} element={<HomePage />} />
-        <Route path="search" element={<SearchPage />} />
-        <Route path="documents/:id" element={<DocumentDetailPage />} />
+        <Route
+          element={
+            <ProtectedRoute
+              allowedRoles={['GUEST', 'USER']}
+              roleRedirect={new Map([['ADMIN', '/admin']])}
+            />
+          }
+        >
+          <Route index={true} element={<HomePage />} />
+          <Route path="search" element={<SearchPage />} />
+          <Route path="documents/:id" element={<DocumentDetailPage />} />
+        </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={['USER']} />}>
+        <Route
+          element={
+            <ProtectedRoute
+              allowedRoles={['USER']}
+              roleRedirect={
+                new Map([
+                  ['ADMIN', '/admin'],
+                  ['GUEST', '/login'],
+                ])
+              }
+            />
+          }
+        >
           <Route path="upload" element={<UploadDocumentPage />} />
         </Route>
       </Route>
 
       {/*
-          ADMIN PAGES
-          - For admin only
-          - When not login, redirect to login page
-          - When login but is not admin, return forbidden page
+          ADMIN ROUTE
       */}
       <Route
         path="/admin"
-        element={<ProtectedRoute allowedRoles={['ADMIN']} />}
+        element={
+          <ProtectedRoute
+            allowedRoles={['ADMIN']}
+            roleRedirect={new Map([['GUEST', '/login']])}
+          />
+        }
       >
         <Route element={<AdminLayout />}>
           <Route index={true} element={<AdminDashboard />} />

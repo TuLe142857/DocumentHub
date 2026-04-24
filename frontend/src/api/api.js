@@ -54,15 +54,15 @@ api.interceptors.response.use(
     }
 
     const originalRequest = error.config;
-    const data = error.response?.data;
+    const errorCode = error?.response?.data?.error_code;
     const isRefreshRequest = originalRequest.url.includes('/auth/refresh');
 
-    if (
-      (data?.error_code === ERROR_CODE.JWT_TOKEN_EXPIRED ||
-        data?.error_code === ERROR_CODE.UNAUTHORIZED) &&
-      !originalRequest._retry &&
-      !isRefreshRequest
-    ) {
+    const needRefresh =
+      (errorCode === ERROR_CODE.JWT_TOKEN_EXPIRED ||
+        errorCode === ERROR_CODE.UNAUTHORIZED) &&
+      !isRefreshRequest &&
+      !originalRequest._retry;
+    if (needRefresh) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -90,7 +90,7 @@ api.interceptors.response.use(
 
         if (
           window.location.pathname !== '/login' &&
-          originalRequest.url.includes('/auth/whoami')
+          !originalRequest.url.includes('/auth/whoami')
         ) {
           alert('please login and try again');
           window.location.href = '/login';

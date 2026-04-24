@@ -8,12 +8,12 @@ import App from './App.jsx';
 import ModalProvider from '@/modal/ModalProvider.jsx';
 createRoot(document.getElementById('root')).render(
   // <StrictMode>
-    <ModalProvider>
-      <Provider store={store}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </Provider>
-    </ModalProvider>
+  <ModalProvider>
+    <Provider store={store}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </Provider>
+  </ModalProvider>
   // </StrictMode>
 );

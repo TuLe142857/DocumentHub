@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import adminApi from '@/api/adminApi.js';
 import { X as ExitIcon, BadgeAlert as ReportIcon } from 'lucide-react';
-import usePagination from "@/hooks/usePagination.jsx";
+import usePagination from '@/hooks/usePagination.jsx';
 
 import DocumentMetadata from '@/pages/document/components/DocumentMetadata.jsx';
-import {toast} from "react-toastify";
+import { toast } from 'react-toastify';
 
-const DocumentView = ({doc}) => {
+const DocumentView = ({ doc }) => {
   const [showPreview, setShowPreview] = useState(false);
 
   return (
@@ -19,7 +19,7 @@ const DocumentView = ({doc}) => {
         className="w-fit self-center rounded-sm p-2 text-green-500 bg-green-100/50 border border-green-500 hover:bg-green-200/50"
         onClick={() => setShowPreview(!showPreview)}
       >
-        {showPreview ? "Hide Preview" : "Show Preview"}
+        {showPreview ? 'Hide Preview' : 'Show Preview'}
       </button>
       {showPreview && (
         <iframe
@@ -29,22 +29,13 @@ const DocumentView = ({doc}) => {
       )}
     </div>
   );
-}
+};
 
-
-const ReportDetails = ({
-  docId,
-  onExit,
-  onHandled,
-  classname = '',
-}) => {
-
+const ReportDetails = ({ docId, onExit, onHandled, classname = '' }) => {
   const [doc, setDoc] = useState();
   const [reports, setReports] = useState([]);
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(false);
-
-
 
   const fetchDoc = useCallback(async () => {
     try {
@@ -57,53 +48,50 @@ const ReportDetails = ({
 
   const fetchReports = useCallback(async () => {
     try {
-      const response = await adminApi.getReportedDocumentDetails(
-        docId,
-        {
-          page: page,
-          limit: 1,
-        }
-      );
+      const response = await adminApi.getReportedDocumentDetails(docId, {
+        page: page,
+        limit: 1,
+      });
       const meta = response.data.meta;
       setHasNext(meta.has_next);
-      setReports(prev => ([...prev, ...response.data.data]))
+      setReports((prev) => [...prev, ...response.data.data]);
     } catch (err) {
       console.log('err fetch reports', err);
     }
   }, [docId, page]);
 
   const handleReport = async (accept) => {
-    if (!confirm(`${accept ? "Accept" : "Reject"} this reports?`)) {
+    if (!confirm(`${accept ? 'Accept' : 'Reject'} this reports?`)) {
       return;
     }
 
-    const reason = prompt("Enter reason");
-    if (! reason)
-      return;
+    const reason = prompt('Enter reason');
+    if (!reason) return;
 
-
-    const toastId = toast.loading("Loading...");
+    const toastId = toast.loading('Loading...');
     try {
-      await adminApi.handleReportedDocument(docId, accept, "");
+      await adminApi.handleReportedDocument(docId, accept, '');
       toast.update(toastId, {
-        type: "success",
-        render: "Sucessful!",
+        type: 'success',
+        render: 'Sucessful!',
         isLoading: false,
-        autoClose: 500
+        autoClose: 500,
       });
       onHandled && onHandled();
       onExit && onExit();
-    }catch (err) {
-      const msg = err?.response?.data?.message || err?.message || "Something went wrong, please try again later";
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Something went wrong, please try again later';
       toast.update(toastId, {
-        type: "error",
+        type: 'error',
         render: msg,
         isLoading: false,
-        autoClose: 500
-      })
+        autoClose: 500,
+      });
     }
   };
-
 
   useEffect(() => {
     fetchDoc();
@@ -124,38 +112,35 @@ const ReportDetails = ({
         <div className="text-black font-semibold text-xl">Reports</div>
       </div>
 
-
       {/*Content*/}
       <div className="flex flex-col flex-1 p-2 gap-2 w-full min-h-0 overflow-auto">
         {doc && <DocumentView doc={doc} />}
 
-        <div>
-          Report list:
-        </div>
+        <div>Report list:</div>
         <div className="flex flex-col p-2 gap-2 w-full max-h-100 shrink-0 overflow-auto rounded-sm bg-white shadow border border-gray-200">
-          {reports && reports.map(report => (
-            <div
-            key={report.id}
-              className="flex flex-col text-md rounded-sm p-2 bg-gray-100"
-            >
+          {reports &&
+            reports.map((report) => (
               <div
-                className="text-red-500 font-semibold"
-              >{report.report_reason}</div>
-              <div className="text-gray-700 text-xs">{report.created_at}</div>
-              <div className="text-gray-700">{report.desc}</div>
-            </div>
-          ))}
+                key={report.id}
+                className="flex flex-col text-md rounded-sm p-2 bg-gray-100"
+              >
+                <div className="text-red-500 font-semibold">
+                  {report.report_reason}
+                </div>
+                <div className="text-gray-700 text-xs">{report.created_at}</div>
+                <div className="text-gray-700">{report.desc}</div>
+              </div>
+            ))}
 
           {hasNext && (
-            <button
-              className=""
-              onClick={() => setPage(page + 1)}
-            >Load more..</button>
+            <button className="" onClick={() => setPage(page + 1)}>
+              Load more..
+            </button>
           )}
         </div>
       </div>
 
-      <hr className="my-1 text-gray-300"/>
+      <hr className="my-1 text-gray-300" />
       {/*Footer*/}
       <div className="flex flex-row p-2 gap-2 justify-end items-center">
         <button
