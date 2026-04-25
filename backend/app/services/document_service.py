@@ -464,7 +464,7 @@ class DocumentService:
         return document
 
     def download_document(
-        self, user: User, document_id: int, document_format: str = ".pdf"
+        self, user: User | None, document_id: int, document_format: str = ".pdf"
     ) -> str:
         """
         Check permission and return download url. Increase download count.
@@ -477,7 +477,11 @@ class DocumentService:
             ),
         )
 
-        err = self.access_control.can_access_document(user, document)
+        err = (
+            self.access_control.can_access_document(user, document)
+            if user is not None
+            else self.access_control.can_access_by_anyone(document)
+        )
         if err:
             raise err
 
@@ -488,9 +492,10 @@ class DocumentService:
                 f"Invalid document format for download. Available formats: {available_formats}",
             )
 
-        redis_download_key = f"download:doc:{document_id}:user:{user.id}"
-        if self.redis_client.set(redis_download_key, "1", ex=3600, nx=True):
-            document.download_count += 1
+        if user is not None:
+            redis_download_key = f"download:doc:{document_id}:user:{user.id}"
+            if self.redis_client.set(redis_download_key, "1", ex=3600, nx=True):
+                document.download_count += 1
 
         ori_url, pdf_url = self.storage_service.generate_download_url(document)
 
