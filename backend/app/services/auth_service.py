@@ -53,7 +53,7 @@ class AuthService:
         Args:
             payload: JWT payload
         """
-        revoke_key = f"jwt_blacklist_{payload.jti}"
+        revoke_key = f"jwt_blacklist:{payload.jti}"
         utc_now = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
         token_life_time_seconds = payload.exp - utc_now
 
@@ -75,7 +75,7 @@ class AuthService:
 
                 - ErrorCode.JWT_TOKEN_REVOKED: JWT token has been revoked
         """
-        revoke_key = f"jwt_blacklist_{payload.jti}"
+        revoke_key = f"jwt_blacklist:{payload.jti}"
         if self.redis_client.get(revoke_key) is not None:
             raise AppException(
                 ErrorCode.JWT_TOKEN_REVOKED, "JWT token has been revoked"

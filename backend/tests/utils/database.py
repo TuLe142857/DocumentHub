@@ -1,122 +1,101 @@
-from dataclasses import dataclass
-
-from fastapi.testclient import TestClient
 import pytest
-from sqlalchemy.orm import Session
-
-from app.core import get_settings
 from app.models import *
+from fastapi.testclient import TestClient
+from app.core import get_settings
+from tests.conftest import db_session
+
+TEST_PASSWORD = "password123"
 
 
-@dataclass
-class SeededData:
-    db_session: Session
-
-    default_password: str
-    role_admin: Role
-    admin: User
-
-    role_user: Role
-    user: User
-
-    public_document: Document
-    private_document: Document
-
-    collection: Collection
-
-    categories: list[Category]
-    tags: list[Tag]
-
-    report_reasons: list[ReportReason]
+@pytest.fixture
+def role_user(db_session):
+    return Role.get_or_create("USER", db_session)
 
 
-@pytest.fixture(scope="function")
-def seeded_db(db_session) -> SeededData:
-    print("Seed DB for test...")
+@pytest.fixture
+def role_admin(db_session):
+    return Role.get_or_create("ADMIN", db_session)
 
-    # default password for user & admin
-    default_password = "password12345"
 
-    # create role
-    role_user = Role.get_or_create("USER", db_session)
-    role_admin = Role.get_or_create("ADMIN", db_session)
-    db_session.add(role_user)
-    db_session.add(role_admin)
-
-    # create user & admin
+@pytest.fixture
+def user(db_session, role_user):
+    print("Create User for test...")
     user = User(
+        email="testuser@mail.com",
         username="test_user",
-        email="test_user@mail.com",
         role=role_user,
         profile=UserProfile(),
     )
-    user.set_password(default_password)
+    user.set_password(TEST_PASSWORD)
     db_session.add(user)
+    db_session.commit()
+    print("Create User for test success!")
+    return user
 
+
+@pytest.fixture
+def admin(db_session, role_admin):
+    print("Create Admin for test...")
     admin = User(
+        email="testadmin@mail.com",
         username="test_admin",
-        email="test_admin@mail.com",
         role=role_admin,
         profile=UserProfile(),
     )
-    admin.set_password(default_password)
+    admin.set_password(TEST_PASSWORD)
     db_session.add(admin)
+    db_session.commit()
+    print("Create Admin for test success!")
+    return admin
 
-    # categories
+
+@pytest.fixture(scope="function")
+def auth_client(app, user):
+    settings = get_settings()
+    with TestClient(app) as client:
+        client.base_url = f"{client.base_url}".rstrip("/") + settings.API_V1_STR
+        login_data = {
+            "identity": user.username,
+            "password": TEST_PASSWORD,
+        }
+        response = client.post("/auth/login", json=login_data)
+        assert response.status_code == 200
+
+        # auth cookie will auto write to this TestClient object when login success
+        yield client
+
+
+@pytest.fixture(scope="function")
+def admin_client(app, admin):
+    settings = get_settings()
+    with TestClient(app) as client:
+        client.base_url = f"{client.base_url}".rstrip("/") + settings.API_V1_STR
+        login_data = {
+            "identity": admin.username,
+            "password": TEST_PASSWORD,
+        }
+
+        response = client.post("/auth/login", json=login_data)
+        assert response.status_code == 200
+        yield client
+
+
+@pytest.fixture
+def categories(db_session) -> list[Category]:
+    print("Create Categories for test...")
     categories = []
     for c in ["Python", "FastAPI", "Pydantic", "SQLAlchemy", "ComputerScience"]:
         category = Category(name=c)
         db_session.add(category)
         categories.append(category)
+    db_session.commit()
+    print("Create Categories for test success!")
+    return categories
 
-    # tags
-    tags = []
-    for t in ["tag1", "tag2", "tag3", "tag4"]:
-        tag = Tag(name=t)
-        db_session.add(tag)
-        tags.append(tag)
 
-    # document
-    public_document = Document(
-        title="Test Document Title",
-        desc="Test Document Description",
-        category=categories[0],
-        owner=user,
-        visibility=DocumentVisibility.PUBLIC,
-        file_type=".doc",
-        file_preview_object_key="file_preview_object_key_pub",
-        file_object_key="file_object_key_pub",
-        sha256sum="sha256sum",
-        md5sum="md5sum",
-        status=DocumentStatus.READY,
-        thumbnail_object_key="thumbnail_object_key",
-    )
-    db_session.add(public_document)
-
-    private_document = Document(
-        title="Private Document Title",
-        desc="Private Document Description",
-        category=categories[1],
-        owner=user,
-        visibility=DocumentVisibility.PRIVATE,
-        file_type=".doc",
-        file_preview_object_key="file_preview_object_key_pri",
-        file_object_key="file_object_key_pri",
-        sha256sum="sha256sum",
-        md5sum="md5sum",
-        status=DocumentStatus.READY,
-        thumbnail_object_key="thumbnail_object_key",
-    )
-    db_session.add(private_document)
-
-    # collection
-    collection = Collection(owner=user, name="Test Collection")
-    collection_item1 = CollectionItem(collection=collection, document=public_document)
-    collection_item2 = CollectionItem(collection=collection, document=private_document)
-    db_session.add(collection)
-    db_session.add(collection_item1)
-    db_session.add(collection_item2)
-
+@pytest.fixture
+def report_reason(db_session) -> list[ReportReason]:
+    print("Create Report Reason for test...")
     report_reasons = []
     for r in [
         "SPAM",
@@ -127,55 +106,6 @@ def seeded_db(db_session) -> SeededData:
         reason = ReportReason(code=r)
         db_session.add(reason)
         report_reasons.append(reason)
-
-    try:
-        db_session.commit()
-        print("Seed DB for test success")
-    except Exception as e:
-        pytest.fail(f"Seed DB for test failed\nException: {str(e)}")
-
-    return SeededData(
-        db_session=db_session,
-        role_admin=role_admin,
-        role_user=role_user,
-        admin=admin,
-        user=user,
-        default_password=default_password,
-        tags=tags,
-        categories=categories,
-        public_document=public_document,
-        private_document=private_document,
-        collection=collection,
-        report_reasons=report_reasons,
-    )
-
-
-@pytest.fixture(scope="function")
-def auth_client(app, seeded_db):
-    settings = get_settings()
-    with TestClient(app) as client:
-        client.base_url = f"{client.base_url}".rstrip("/") + settings.API_V1_STR
-        login_data = {
-            "identity": seeded_db.user.username,
-            "password": seeded_db.default_password,
-        }
-        response = client.post("/auth/login", json=login_data)
-        assert response.status_code == 200
-
-        # auth cookie will auto write to this TestClient object when login success
-        yield client
-
-
-@pytest.fixture(scope="function")
-def admin_client(app, seeded_db):
-    settings = get_settings()
-    with TestClient(app) as client:
-        client.base_url = f"{client.base_url}".rstrip("/") + settings.API_V1_STR
-        login_data = {
-            "identity": seeded_db.admin.username,
-            "password": seeded_db.default_password,
-        }
-
-        response = client.post("/auth/login", json=login_data)
-        assert response.status_code == 200
-        yield client
+    db_session.commit()
+    print("Create Report Reasons for test success!")
+    return report_reasons

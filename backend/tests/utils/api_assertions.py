@@ -22,7 +22,7 @@ def _get_json_payload(response: Response, print_payload: bool = True) -> dict[st
 
 def assert_response_ok(
     response: Response, expected_status_code: int = 200, print_payload: bool = True
-) -> Any:
+) -> dict[str, Any]:
     """
     Helper function for asserting the response in case of success.
     Args:
