@@ -7,8 +7,10 @@ from .colection_factory import CollectionFactory
 from .document_factory import DocumentFactory
 from .user_factory import UserFactory
 from .category_factory import CategoryFactory
+from .report_factory import ReportFactory
 
 TEST_PASSWORD = "password123"
+HASHED_TEST_PASSWORD = ""
 
 
 @pytest.fixture
@@ -133,3 +135,8 @@ def user_factory(db_session) -> UserFactory:
 @pytest.fixture
 def category_factory(db_session) -> CategoryFactory:
     return CategoryFactory(db_session)
+
+
+@pytest.fixture
+def report_factory(db_session) -> ReportFactory:
+    return ReportFactory(db_session)

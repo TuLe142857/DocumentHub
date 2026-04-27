@@ -107,6 +107,12 @@ class ReportService:
     def list_pending_reports(
         self, document_id: int, page: int = 1, limit: int = 10
     ) -> tuple[Sequence[DocumentReport], int]:
+        self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
         return self.crud_report.get_multi(
             DocumentReport.status == ReportStatus.PENDING,
             DocumentReport.document_id == document_id,
@@ -131,14 +137,17 @@ class ReportService:
             document.banned_at = datetime.datetime.now(datetime.timezone.utc)
             document.status = DocumentStatus.BANNED
 
-        self.db_session.execute(
+        effected_row_count = self.db_session.execute(
             update(DocumentReport)
             .where(
                 DocumentReport.document_id == document_id,
                 DocumentReport.status == ReportStatus.PENDING,
             )
             .values(status=ReportStatus.RESOLVED if accept else ReportStatus.REJECTED)
-        )
+        ).rowcount
+
+        if effected_row_count == 0:
+            return
 
         mod_log = ModerationLog(
             admin_id=admin.id,

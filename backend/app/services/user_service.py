@@ -115,16 +115,24 @@ class UserService:
     def ban_user(self, user_id: int, admin_id: int, reason: str):
         user = self.crud_user.get(
             user_id,
-            on_not_found=AppException(ErrorCode.INVALID_CREDENTIALS, "User not found"),
+            on_not_found=AppException(ErrorCode.RESOURCE_NOT_FOUND, "User not found"),
         )
+
+        # user was banned, return
+        if not user.is_active:
+            return
         user.is_active = False
         # send email ....
 
     def unban_user(self, user_id: int, admin_id: int):
         user = self.crud_user.get(
             user_id,
-            on_not_found=AppException(ErrorCode.INVALID_CREDENTIALS, "User not found"),
+            on_not_found=AppException(ErrorCode.RESOURCE_NOT_FOUND, "User not found"),
         )
+
+        # user is active, return
+        if user.is_active:
+            return
         user.is_active = True
         # send email ....
 
