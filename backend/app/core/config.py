@@ -77,6 +77,8 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_USER: str
     REDIS_PASSWORD: SecretStr
+    REDIS_APP_DB: int = 0
+    REDIS_TASK_DB: int = 1
 
     def get_redis_url(self, db: int = 0) -> RedisDsn:
         return RedisDsn.build(
@@ -91,17 +93,17 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def REDIS_URL(self) -> RedisDsn:
-        return self.get_redis_url(0)
+        return self.get_redis_url(self.REDIS_APP_DB)
 
     @computed_field
     @property
     def CELERY_BROKER(self) -> RedisDsn:
-        return self.get_redis_url(1)
+        return self.get_redis_url(self.REDIS_TASK_DB)
 
     @computed_field
     @property
     def CELERY_BACKEND(self) -> RedisDsn:
-        return self.get_redis_url(1)
+        return self.get_redis_url(self.REDIS_TASK_DB)
 
     S3_ENDPOINT: str
     S3_ACCESS_KEY: str

@@ -3,6 +3,10 @@ from app.models import *
 from fastapi.testclient import TestClient
 from app.core import get_settings
 from tests.conftest import db_session
+from .colection_factory import CollectionFactory
+from .document_factory import DocumentFactory
+from .user_factory import UserFactory
+from .category_factory import CategoryFactory
 
 TEST_PASSWORD = "password123"
 
@@ -109,3 +113,22 @@ def report_reason(db_session) -> list[ReportReason]:
     db_session.commit()
     print("Create Report Reasons for test success!")
     return report_reasons
+
+
+@pytest.fixture
+def collection_factory(db_session) -> CollectionFactory:
+    return CollectionFactory(db_session)
+
+
+@pytest.fixture
+def document_factory(db_session) -> DocumentFactory:
+    return DocumentFactory(db_session)
+
+
+@pytest.fixture
+def user_factory(db_session) -> UserFactory:
+    return UserFactory(db_session)
+
+@pytest.fixture
+def category_factory(db_session) -> CategoryFactory:
+    return CategoryFactory(db_session)

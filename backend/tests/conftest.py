@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 import pytest
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-
+from redis import from_url
 from app.core import get_settings
 from app.dependencies import get_db_engine
 from app.main import celery_worker, clear_settings_cache, create_app
@@ -30,10 +30,14 @@ def setup():
     setenv("SMTP_USE_TLS", "false")
 
     # change db
-    # this config copied fron docker/mysql/test_setup.sql
+    # this config copied from docker/mysql/test_setup.sql
     setenv("MYSQL_DATABASE", "db_test")
     setenv("MYSQL_USER", "user_test")
     setenv("MYSQL_PASSWORD", "password_test")
+
+    # user different redis database for test
+    setenv("REDIS_APP_DB", "2")
+    setenv("REDIS_TASK_DB", "3")
 
     print("Setup for testing environment complete!")
 
@@ -50,6 +54,17 @@ def app():
 
     app = create_app()
     return app
+
+@pytest.fixture(scope="session")
+def redis_client():
+    settings = get_settings()
+    return from_url(str(settings.REDIS_URL))
+
+@pytest.fixture(scope="function", autouse=True)
+def clear_redis_before_test(redis_client):
+    print("[fixture] clear redis cache before test")
+    redis_client.flushdb()
+    yield
 
 
 @pytest.fixture(scope="function")

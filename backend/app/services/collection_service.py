@@ -221,7 +221,7 @@ class CollectionService:
 
         err = self.access_control.can_update_collection(
             user, collection
-        ) and self.access_control.can_access_document(user, document)
+        ) or self.access_control.can_access_document(user, document)
         if err is not None:
             raise err
 
@@ -249,7 +249,7 @@ class CollectionService:
                     ErrorCode.RESOURCE_NOT_FOUND, "Collection not found"
                 ),
             )
-            for collection_id in collection_ids
+            for collection_id in set(collection_ids)
         ]
 
         document = self.crud_doc.get(
@@ -282,6 +282,12 @@ class CollectionService:
             collection_id,
             on_not_found=AppException(
                 ErrorCode.RESOURCE_NOT_FOUND, "Collection not found"
+            ),
+        )
+        self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
             ),
         )
 
