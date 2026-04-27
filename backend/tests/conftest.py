@@ -55,10 +55,12 @@ def app():
     app = create_app()
     return app
 
+
 @pytest.fixture(scope="session")
 def redis_client():
     settings = get_settings()
     return from_url(str(settings.REDIS_URL))
+
 
 @pytest.fixture(scope="function", autouse=True)
 def clear_redis_before_test(redis_client):

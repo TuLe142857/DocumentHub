@@ -11,7 +11,7 @@ from tests.utils.database import (
     user_factory,
     document_factory,
     collection_factory,
-category_factory,
+    category_factory,
     TEST_PASSWORD,
 )
 
@@ -207,7 +207,9 @@ class TestGetDocumentDetails:
 
     def test_guest_cannot_get_private_document(self, client, user, document_factory):
         private_doc = document_factory.create(
-            owner=user, category=Category(name="test_category"), visibility=DocumentVisibility.PRIVATE
+            owner=user,
+            category=Category(name="test_category"),
+            visibility=DocumentVisibility.PRIVATE,
         )
         assert_response_error(
             client.get(f"/documents/{private_doc.id}"),
@@ -272,27 +274,32 @@ class TestGetDocumentDetails:
 
 
 class TestUpdateDocument:
-
     # ------------------------------------------------------------------
     # Success cases
     # ------------------------------------------------------------------
 
-    @pytest.mark.parametrize("payload", [
-        {"title": "New Title"},
-        {"desc": "New description"},
-        {"visibility": DocumentVisibility.PRIVATE.name},
-        {"title": "New Title", "desc": "New description"},
-        {"title": "New Title", "visibility": DocumentVisibility.PRIVATE.name},
-        {"title": "New Title", "desc": "New desc", "visibility": DocumentVisibility.PRIVATE.name},
-    ])
-    def test_owner_can_update(self, auth_client, user, document_factory, category_factory, payload):
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {"title": "New Title"},
+            {"desc": "New description"},
+            {"visibility": DocumentVisibility.PRIVATE.name},
+            {"title": "New Title", "desc": "New description"},
+            {"title": "New Title", "visibility": DocumentVisibility.PRIVATE.name},
+            {
+                "title": "New Title",
+                "desc": "New desc",
+                "visibility": DocumentVisibility.PRIVATE.name,
+            },
+        ],
+    )
+    def test_owner_can_update(
+        self, auth_client, user, document_factory, category_factory, payload
+    ):
         doc = document_factory.create(owner=user, category=category_factory.create())
-        assert_response_ok(
-            auth_client.patch(f"/documents/{doc.id}", json=payload)
-        )
+        assert_response_ok(auth_client.patch(f"/documents/{doc.id}", json=payload))
 
         # check after update
-
 
     # ------------------------------------------------------------------
     # Permission
@@ -305,9 +312,13 @@ class TestUpdateDocument:
             ErrorCode.UNAUTHORIZED,
         )
 
-    def test_stranger_cannot_update(self, auth_client, document_factory, category_factory, user_factory):
+    def test_stranger_cannot_update(
+        self, auth_client, document_factory, category_factory, user_factory
+    ):
         other_user = user_factory.create("other_user", "other@mail.com", TEST_PASSWORD)
-        doc = document_factory.create(owner=other_user, category=category_factory.create())
+        doc = document_factory.create(
+            owner=other_user, category=category_factory.create()
+        )
         assert_response_error(
             auth_client.patch(f"/documents/{doc.id}", json={"title": "New Title"}),
             ErrorCode.FORBIDDEN,
@@ -327,29 +338,44 @@ class TestUpdateDocument:
     # Validation
     # ------------------------------------------------------------------
 
-    def test_duplicate_title(self, auth_client, user, document_factory, category_factory):
+    def test_duplicate_title(
+        self, auth_client, user, document_factory, category_factory
+    ):
         category = category_factory.create()
-        existing_doc = document_factory.create(owner=user, category=category, title="Existing Title")
-        target_doc = document_factory.create(owner=user, category=category, title="Other Title")
+        existing_doc = document_factory.create(
+            owner=user, category=category, title="Existing Title"
+        )
+        target_doc = document_factory.create(
+            owner=user, category=category, title="Other Title"
+        )
         assert_response_error(
-            auth_client.patch(f"/documents/{target_doc.id}", json={"title": existing_doc.title}),
+            auth_client.patch(
+                f"/documents/{target_doc.id}", json={"title": existing_doc.title}
+            ),
             ErrorCode.RESOURCE_ALREADY_EXISTS,
         )
 
-    def test_category_not_found(self, auth_client, user, document_factory, category_factory):
+    def test_category_not_found(
+        self, auth_client, user, document_factory, category_factory
+    ):
         doc = document_factory.create(owner=user, category=category_factory.create())
         assert_response_error(
             auth_client.patch(f"/documents/{doc.id}", json={"category_id": 99999}),
             ErrorCode.RESOURCE_NOT_FOUND,
         )
 
-    @pytest.mark.parametrize("tags", [
-        [""],
-        ["CapitalizeTags"],
-        ["special_char_&^%"],
-        ["contain space"],
-    ])
-    def test_invalid_tags(self, auth_client, user, document_factory, category_factory, tags):
+    @pytest.mark.parametrize(
+        "tags",
+        [
+            [""],
+            ["CapitalizeTags"],
+            ["special_char_&^%"],
+            ["contain space"],
+        ],
+    )
+    def test_invalid_tags(
+        self, auth_client, user, document_factory, category_factory, tags
+    ):
         doc = document_factory.create(owner=user, category=category_factory.create())
         assert_response_error(
             auth_client.patch(f"/documents/{doc.id}", json={"tags": tags}),
@@ -364,9 +390,7 @@ class TestDeleteDocument:
 
     def test_success(self, auth_client, user, document_factory, category_factory):
         doc = document_factory.create(owner=user, category=category_factory.create())
-        assert_response_ok(
-            auth_client.delete(f"/documents/{doc.id}")
-        )
+        assert_response_ok(auth_client.delete(f"/documents/{doc.id}"))
 
     def test_unauthenticated(self, client, user, document_factory, category_factory):
         doc = document_factory.create(owner=user, category=category_factory.create())
@@ -375,9 +399,13 @@ class TestDeleteDocument:
             ErrorCode.UNAUTHORIZED,
         )
 
-    def test_stranger_cannot_delete(self, auth_client, document_factory, category_factory, user_factory):
+    def test_stranger_cannot_delete(
+        self, auth_client, document_factory, category_factory, user_factory
+    ):
         other_user = user_factory.create("other_user", "other@mail.com", TEST_PASSWORD)
-        doc = document_factory.create(owner=other_user, category=category_factory.create())
+        doc = document_factory.create(
+            owner=other_user, category=category_factory.create()
+        )
         assert_response_error(
             auth_client.delete(f"/documents/{doc.id}"),
             ErrorCode.FORBIDDEN,
@@ -389,15 +417,12 @@ class TestDeleteDocument:
             ErrorCode.RESOURCE_NOT_FOUND,
         )
 
+
 class TestRestoreDocument:
-    def test_success(
-            self, auth_client, user, document_factory, category_factory
-    ):
+    def test_success(self, auth_client, user, document_factory, category_factory):
         doc = document_factory.create(owner=user, category=category_factory.create())
         auth_client.delete(f"/documents/{doc.id}")
-        assert_response_ok(
-            auth_client.post(f"/documents/{doc.id}/restore")
-        )
+        assert_response_ok(auth_client.post(f"/documents/{doc.id}/restore"))
 
     def test_unauthenticated(self, client, user, document_factory, category_factory):
         doc = document_factory.create(owner=user, category=category_factory.create())
@@ -407,10 +432,12 @@ class TestRestoreDocument:
         )
 
     def test_stranger_cannot_restore(
-            self, auth_client, document_factory, category_factory, user_factory
+        self, auth_client, document_factory, category_factory, user_factory
     ):
         other_user = user_factory.create("other_user", "other@mail.com", TEST_PASSWORD)
-        doc = document_factory.create(owner=other_user, category=category_factory.create())
+        doc = document_factory.create(
+            owner=other_user, category=category_factory.create()
+        )
         assert_response_error(
             auth_client.post(f"/documents/{doc.id}/restore"),
             ErrorCode.FORBIDDEN,
@@ -422,6 +449,7 @@ class TestRestoreDocument:
             ErrorCode.RESOURCE_NOT_FOUND,
         )
 
+
 class TestDocumentTags:
     """
     PUT    /documents/{document_id}/tags  — thêm tag
@@ -432,13 +460,17 @@ class TestDocumentTags:
     # PUT — Add tag
     # ------------------------------------------------------------------
 
-    def test_add_tag_success(self, auth_client, user, document_factory, category_factory):
+    def test_add_tag_success(
+        self, auth_client, user, document_factory, category_factory
+    ):
         doc = document_factory.create(owner=user, category=category_factory.create())
         assert_response_ok(
             auth_client.put(f"/documents/{doc.id}/tags", json={"tag_name": "newtag"})
         )
 
-    def test_add_tag_unauthenticated(self, client, user, document_factory, category_factory):
+    def test_add_tag_unauthenticated(
+        self, client, user, document_factory, category_factory
+    ):
         doc = document_factory.create(owner=user, category=category_factory.create())
         assert_response_error(
             client.put(f"/documents/{doc.id}/tags", json={"tag_name": "newtag"}),
@@ -449,7 +481,9 @@ class TestDocumentTags:
         self, auth_client, document_factory, category_factory, user_factory
     ):
         other_user = user_factory.create("other_user", "other@mail.com", TEST_PASSWORD)
-        doc = document_factory.create(owner=other_user, category=category_factory.create())
+        doc = document_factory.create(
+            owner=other_user, category=category_factory.create()
+        )
         assert_response_error(
             auth_client.put(f"/documents/{doc.id}/tags", json={"tag_name": "newtag"}),
             ErrorCode.FORBIDDEN,
@@ -461,13 +495,18 @@ class TestDocumentTags:
             ErrorCode.RESOURCE_NOT_FOUND,
         )
 
-    @pytest.mark.parametrize("tag_name", [
-        "",
-        "CapitalizeTag",
-        "special_&^%",
-        "contain space",
-    ])
-    def test_add_invalid_tag_name(self, auth_client, user, document_factory, category_factory, tag_name):
+    @pytest.mark.parametrize(
+        "tag_name",
+        [
+            "",
+            "CapitalizeTag",
+            "special_&^%",
+            "contain space",
+        ],
+    )
+    def test_add_invalid_tag_name(
+        self, auth_client, user, document_factory, category_factory, tag_name
+    ):
         doc = document_factory.create(owner=user, category=category_factory.create())
         assert_response_error(
             auth_client.put(f"/documents/{doc.id}/tags", json={"tag_name": tag_name}),
@@ -478,17 +517,25 @@ class TestDocumentTags:
     # DELETE — Remove tag
     # ------------------------------------------------------------------
 
-    def test_remove_tag_success(self, auth_client, user, document_factory, category_factory):
+    def test_remove_tag_success(
+        self, auth_client, user, document_factory, category_factory
+    ):
         doc = document_factory.create(owner=user, category=category_factory.create())
         auth_client.put(f"/documents/{doc.id}/tags", json={"tag_name": "newtag"})
         assert_response_ok(
-            auth_client.request("DELETE", f"/documents/{doc.id}/tags", json={"tag_name": "newtag"})
+            auth_client.request(
+                "DELETE", f"/documents/{doc.id}/tags", json={"tag_name": "newtag"}
+            )
         )
 
-    def test_remove_tag_unauthenticated(self, client, user, document_factory, category_factory):
+    def test_remove_tag_unauthenticated(
+        self, client, user, document_factory, category_factory
+    ):
         doc = document_factory.create(owner=user, category=category_factory.create())
         assert_response_error(
-            client.request("DELETE", f"/documents/{doc.id}/tags", json={"tag_name": "newtag"}),
+            client.request(
+                "DELETE", f"/documents/{doc.id}/tags", json={"tag_name": "newtag"}
+            ),
             ErrorCode.UNAUTHORIZED,
         )
 
@@ -496,19 +543,23 @@ class TestDocumentTags:
         self, auth_client, document_factory, category_factory, user_factory
     ):
         other_user = user_factory.create("other_user", "other@mail.com", TEST_PASSWORD)
-        doc = document_factory.create(owner=other_user, category=category_factory.create())
+        doc = document_factory.create(
+            owner=other_user, category=category_factory.create()
+        )
         assert_response_error(
-            auth_client.request("DELETE", f"/documents/{doc.id}/tags", json={"tag_name": "newtag"}),
+            auth_client.request(
+                "DELETE", f"/documents/{doc.id}/tags", json={"tag_name": "newtag"}
+            ),
             ErrorCode.FORBIDDEN,
         )
 
-    def test_remove_tag_document_not_found(self, auth_client:TestClient):
+    def test_remove_tag_document_not_found(self, auth_client: TestClient):
         assert_response_error(
             auth_client.request(
                 "DELETE",
                 f"/documents/{999}/tags",
                 json={"tag_name": "newtag"},
-            ) ,
+            ),
             ErrorCode.RESOURCE_NOT_FOUND,
         )
 
@@ -526,15 +577,18 @@ class TestDocumentLike:
     def test_like_document(self, auth_client, user, document_factory, category_factory):
         doc = document_factory.create(owner=user, category=category_factory.create())
 
-        like_count_before = assert_response_ok(auth_client.get(f"/documents/{doc.id}"))["like_count"]
-        assert_response_ok(
-            auth_client.put(f"/documents/{doc.id}/like")
-        )
-        like_count_after = assert_response_ok(auth_client.get(f"/documents/{doc.id}"))["like_count"]
+        like_count_before = assert_response_ok(auth_client.get(f"/documents/{doc.id}"))[
+            "like_count"
+        ]
+        assert_response_ok(auth_client.put(f"/documents/{doc.id}/like"))
+        like_count_after = assert_response_ok(auth_client.get(f"/documents/{doc.id}"))[
+            "like_count"
+        ]
         assert like_count_after == like_count_before + 1
 
-
-    def test_like_document_unauthenticated(self, client, user, document_factory, category_factory):
+    def test_like_document_unauthenticated(
+        self, client, user, document_factory, category_factory
+    ):
         doc = document_factory.create(owner=user, category=category_factory.create())
         assert_response_error(
             client.put(f"/documents/{doc.id}/like"),
@@ -565,19 +619,25 @@ class TestDocumentLike:
     # DELETE — Unlike
     # ------------------------------------------------------------------
 
-    def test_unlike_document(self, auth_client, user, document_factory, category_factory):
+    def test_unlike_document(
+        self, auth_client, user, document_factory, category_factory
+    ):
         doc = document_factory.create(owner=user, category=category_factory.create())
         auth_client.put(f"/documents/{doc.id}/like")
 
-        like_count_before = assert_response_ok(auth_client.get(f"/documents/{doc.id}"))["like_count"]
-        assert_response_ok(
-            auth_client.delete(f"/documents/{doc.id}/like")
-        )
-        like_count_after = assert_response_ok(auth_client.get(f"/documents/{doc.id}"))["like_count"]
+        like_count_before = assert_response_ok(auth_client.get(f"/documents/{doc.id}"))[
+            "like_count"
+        ]
+        assert_response_ok(auth_client.delete(f"/documents/{doc.id}/like"))
+        like_count_after = assert_response_ok(auth_client.get(f"/documents/{doc.id}"))[
+            "like_count"
+        ]
 
         assert like_count_after == like_count_before - 1
 
-    def test_unlike_document_unauthenticated(self, client, user, document_factory, category_factory):
+    def test_unlike_document_unauthenticated(
+        self, client, user, document_factory, category_factory
+    ):
         doc = document_factory.create(owner=user, category=category_factory.create())
         assert_response_error(
             client.delete(f"/documents/{doc.id}/like"),
@@ -598,51 +658,96 @@ class TestDownloadDocument:
     """
 
     @staticmethod
-    def _do_download_success(client: TestClient, doc_id: int, assert_download_count:bool = True):
+    def _do_download_success(
+        client: TestClient, doc_id: int, assert_download_count: bool = True
+    ):
         if assert_download_count:
-            download_count_before = assert_response_ok(client.get(f"/documents/{doc_id}"))["download_count"]
-            download_url = assert_response_ok(client.get(f"/documents/{doc_id}/download"))
-            download_count_after = assert_response_ok(client.get(f"/documents/{doc_id}"))["download_count"]
+            download_count_before = assert_response_ok(
+                client.get(f"/documents/{doc_id}")
+            )["download_count"]
+            download_url = assert_response_ok(
+                client.get(f"/documents/{doc_id}/download")
+            )
+            download_count_after = assert_response_ok(
+                client.get(f"/documents/{doc_id}")
+            )["download_count"]
             assert isinstance(download_url, str)
             assert download_count_after == download_count_before + 1
         else:
-            download_url = assert_response_ok(client.get(f"/documents/{doc_id}/download"))
+            download_url = assert_response_ok(
+                client.get(f"/documents/{doc_id}/download")
+            )
             assert isinstance(download_url, str)
 
     # ------------------------------------------------------------------
     # Success
     # ------------------------------------------------------------------
 
-    def test_owner_can_download_own_public_document(self, auth_client, user, document_factory, category_factory):
-        doc = document_factory.create(owner=user, category=category_factory.create(), file_type=".docx")
+    def test_owner_can_download_own_public_document(
+        self, auth_client, user, document_factory, category_factory
+    ):
+        doc = document_factory.create(
+            owner=user, category=category_factory.create(), file_type=".docx"
+        )
         self._do_download_success(auth_client, doc.id)
 
-    def test_owner_can_download_own_private_document(self, auth_client, user, document_factory, category_factory):
-        doc = document_factory.create(owner=user, category=category_factory.create(), visibility=DocumentVisibility.PRIVATE,  file_type=".docx")
+    def test_owner_can_download_own_private_document(
+        self, auth_client, user, document_factory, category_factory
+    ):
+        doc = document_factory.create(
+            owner=user,
+            category=category_factory.create(),
+            visibility=DocumentVisibility.PRIVATE,
+            file_type=".docx",
+        )
         self._do_download_success(auth_client, doc.id)
 
-    def test_user_can_download_others_public_document(self, auth_client, user, document_factory, category_factory, user_factory):
-        other_user = user_factory.create("other_user", "other_user@fakemail", TEST_PASSWORD)
-        other_pub_doc = document_factory.create(owner=other_user, category=category_factory.create())
+    def test_user_can_download_others_public_document(
+        self, auth_client, user, document_factory, category_factory, user_factory
+    ):
+        other_user = user_factory.create(
+            "other_user", "other_user@fakemail", TEST_PASSWORD
+        )
+        other_pub_doc = document_factory.create(
+            owner=other_user, category=category_factory.create()
+        )
 
         self._do_download_success(auth_client, other_pub_doc.id)
 
-    def test_user_can_not_download_others_private_document(self, auth_client, user, document_factory, category_factory,
-                                                      user_factory):
-        other_user = user_factory.create("other_user", "other_user@fakemail", TEST_PASSWORD)
-        other_private_doc = document_factory.create(owner=other_user, category=category_factory.create(), visibility=DocumentVisibility.PRIVATE)
+    def test_user_can_not_download_others_private_document(
+        self, auth_client, user, document_factory, category_factory, user_factory
+    ):
+        other_user = user_factory.create(
+            "other_user", "other_user@fakemail", TEST_PASSWORD
+        )
+        other_private_doc = document_factory.create(
+            owner=other_user,
+            category=category_factory.create(),
+            visibility=DocumentVisibility.PRIVATE,
+        )
 
         assert_response_error(
             auth_client.get(f"/documents/{other_private_doc.id}/download"),
             ErrorCode.FORBIDDEN,
         )
 
-    def test_guest_can_download_public_document(self, client, user, document_factory, category_factory):
-        doc = document_factory.create(owner=user, category=category_factory.create(), file_type=".docx")
+    def test_guest_can_download_public_document(
+        self, client, user, document_factory, category_factory
+    ):
+        doc = document_factory.create(
+            owner=user, category=category_factory.create(), file_type=".docx"
+        )
         self._do_download_success(client, doc.id, assert_download_count=False)
 
-    def test_guest_can_not_download_private_document(self, client, user, document_factory, category_factory):
-        doc = document_factory.create(owner=user, category=category_factory.create(), visibility=DocumentVisibility.PRIVATE, file_type=".docx")
+    def test_guest_can_not_download_private_document(
+        self, client, user, document_factory, category_factory
+    ):
+        doc = document_factory.create(
+            owner=user,
+            category=category_factory.create(),
+            visibility=DocumentVisibility.PRIVATE,
+            file_type=".docx",
+        )
         assert_response_error(
             client.get(f"/documents/{doc.id}/download", params={"format": "./pdf"}),
             ErrorCode.FORBIDDEN,
@@ -655,7 +760,9 @@ class TestDownloadDocument:
         )
 
     @pytest.mark.parametrize("fmt", [".xyz", ".html", ".md", "invalid"])
-    def test_unsupported_format(self, auth_client, user, document_factory, category_factory, fmt):
+    def test_unsupported_format(
+        self, auth_client, user, document_factory, category_factory, fmt
+    ):
         doc = document_factory.create(owner=user, category=category_factory.create())
         assert_response_error(
             auth_client.get(f"/documents/{doc.id}/download", params={"format": fmt}),
@@ -667,16 +774,21 @@ class TestSyncDocumentCollections:
     """
     PUT /documents/{document_id}/collections
     """
+
     @staticmethod
     def _do_sync_success(client, document_id, collection_ids):
         assert_response_ok(
-            client.put(f"/documents/{document_id}/collections", json={"collection_ids": collection_ids}),
+            client.put(
+                f"/documents/{document_id}/collections",
+                json={"collection_ids": collection_ids},
+            ),
         )
 
         # check after sync
         for c_id in collection_ids:
             items = assert_response_ok(client.get(f"/collections/{c_id}/items"))
             assert any(item["id"] == document_id for item in items)
+
     # ------------------------------------------------------------------
     # Success
     # ------------------------------------------------------------------
@@ -701,7 +813,6 @@ class TestSyncDocumentCollections:
         # remove document from 1/2 collections
         self._do_sync_success(auth_client, doc.id, [c.id for c in collections[0:5]])
 
-
     def test_sync_replaces_existing_collections(
         self, auth_client, user, document_factory, collection_factory, category_factory
     ):
@@ -712,9 +823,10 @@ class TestSyncDocumentCollections:
         self._do_sync_success(auth_client, doc.id, [c.id for c in collections])
 
         # replace 1/2 collections by new collections
-        new_collections = collections[0:5] + collection_factory.create_many(n=5, owner=user, name_prefix="new_replace")
+        new_collections = collections[0:5] + collection_factory.create_many(
+            n=5, owner=user, name_prefix="new_replace"
+        )
         self._do_sync_success(auth_client, doc.id, [c.id for c in new_collections[0:5]])
-
 
     def test_sync_with_duplicate_collection_ids(
         self, auth_client, user, document_factory, collection_factory, category_factory
@@ -727,7 +839,9 @@ class TestSyncDocumentCollections:
     # Permission
     # ------------------------------------------------------------------
 
-    def test_unauthenticated(self, client, user, document_factory, collection_factory, category_factory):
+    def test_unauthenticated(
+        self, client, user, document_factory, collection_factory, category_factory
+    ):
         doc = document_factory.create(owner=user, category=category_factory.create())
         col = collection_factory.create(owner=user)
         assert_response_error(
@@ -739,7 +853,13 @@ class TestSyncDocumentCollections:
         )
 
     def test_cannot_sync_into_others_collection(
-        self, auth_client, user, document_factory, collection_factory, category_factory, user_factory
+        self,
+        auth_client,
+        user,
+        document_factory,
+        collection_factory,
+        category_factory,
+        user_factory,
     ):
         other_user = user_factory.create("other_user", "other@mail.com", TEST_PASSWORD)
         doc = document_factory.create(owner=user, category=category_factory.create())
@@ -751,16 +871,33 @@ class TestSyncDocumentCollections:
             ),
             ErrorCode.FORBIDDEN,
         )
-    def test_cannot_syn_others_private_document(self, auth_client, user, document_factory, collection_factory, category_factory, user_factory):
+
+    def test_cannot_syn_others_private_document(
+        self,
+        auth_client,
+        user,
+        document_factory,
+        collection_factory,
+        category_factory,
+        user_factory,
+    ):
         category = category_factory.create()
         own_collections = collection_factory.create_many(n=2, owner=user)
-        other_user = user_factory.create("other_user", "other_user@fakemail", TEST_PASSWORD)
-        other_private_document = document_factory.create(owner=other_user, visibility=DocumentVisibility.PRIVATE, category=category)
+        other_user = user_factory.create(
+            "other_user", "other_user@fakemail", TEST_PASSWORD
+        )
+        other_private_document = document_factory.create(
+            owner=other_user, visibility=DocumentVisibility.PRIVATE, category=category
+        )
 
         assert_response_error(
-            auth_client.put(f"/documents/{other_private_document.id}/collections", json={"collection_ids": [c.id for c in own_collections]}),
+            auth_client.put(
+                f"/documents/{other_private_document.id}/collections",
+                json={"collection_ids": [c.id for c in own_collections]},
+            ),
             ErrorCode.FORBIDDEN,
         )
+
     # ------------------------------------------------------------------
     # Not found
     # ------------------------------------------------------------------
@@ -775,7 +912,9 @@ class TestSyncDocumentCollections:
             ErrorCode.RESOURCE_NOT_FOUND,
         )
 
-    def test_collection_not_found(self, auth_client, user, document_factory, category_factory):
+    def test_collection_not_found(
+        self, auth_client, user, document_factory, category_factory
+    ):
         doc = document_factory.create(owner=user, category=category_factory.create())
         assert_response_error(
             auth_client.put(
@@ -805,11 +944,11 @@ class TestSyncDocumentCollections:
     # Validation
     # ------------------------------------------------------------------
 
-    def test_missing_collection_ids_field(self, auth_client, user, document_factory, category_factory):
+    def test_missing_collection_ids_field(
+        self, auth_client, user, document_factory, category_factory
+    ):
         doc = document_factory.create(owner=user, category=category_factory.create())
         assert_response_error(
             auth_client.put(f"/documents/{doc.id}/collections", json={}),
             ErrorCode.VALIDATION_ERROR,
         )
-
-

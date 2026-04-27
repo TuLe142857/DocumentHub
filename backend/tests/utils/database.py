@@ -129,6 +129,7 @@ def document_factory(db_session) -> DocumentFactory:
 def user_factory(db_session) -> UserFactory:
     return UserFactory(db_session)
 
+
 @pytest.fixture
 def category_factory(db_session) -> CategoryFactory:
     return CategoryFactory(db_session)

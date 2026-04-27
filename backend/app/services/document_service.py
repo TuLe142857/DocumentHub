@@ -562,15 +562,27 @@ class DocumentService:
         if desc:
             update_dict["desc"] = desc
         if title:
-            if self.db_session.execute(select(Document).where(
-                Document.owner_id == document.owner_id,
-                Document.title == title,
-                Document.id != document_id,
-            )).scalar_one_or_none() is not None:
-                raise AppException(ErrorCode.RESOURCE_ALREADY_EXISTS, "Document title already exists")
+            if (
+                self.db_session.execute(
+                    select(Document).where(
+                        Document.owner_id == document.owner_id,
+                        Document.title == title,
+                        Document.id != document_id,
+                    )
+                ).scalar_one_or_none()
+                is not None
+            ):
+                raise AppException(
+                    ErrorCode.RESOURCE_ALREADY_EXISTS, "Document title already exists"
+                )
             update_dict["title"] = title
         if category_id:
-            if self.db_session.execute(select(Category).where(Category.id == category_id)).scalar_one_or_none() is None:
+            if (
+                self.db_session.execute(
+                    select(Category).where(Category.id == category_id)
+                ).scalar_one_or_none()
+                is None
+            ):
                 raise AppException(ErrorCode.RESOURCE_NOT_FOUND, "Category not found")
             update_dict["category_id"] = category_id
         if visibility:

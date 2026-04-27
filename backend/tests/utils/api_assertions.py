@@ -43,14 +43,15 @@ def assert_response_ok(
     assert "data" in payload
     return payload.get("data")
 
+
 def assert_response_paginated_ok(
     response: Response,
     expected_status_code: int = 200,
     expected_page: int | None = None,
-    expected_limit: int | None  = None,
+    expected_limit: int | None = None,
     expected_total_items: int | None = None,
     expected_total_page: int | None = None,
-    print_payload: bool = True
+    print_payload: bool = True,
 ) -> list[Any]:
     payload = _get_json_payload(response, print_payload=print_payload)
 
@@ -59,7 +60,7 @@ def assert_response_paginated_ok(
     assert payload.get("success") is True
     assert "message" in payload
     assert "data" in payload
-    data =payload.get("data")
+    data = payload.get("data")
     assert isinstance(data, list)
 
     # pagination meta
@@ -87,6 +88,7 @@ def assert_response_paginated_ok(
     assert "has_prev" in meta
 
     return data
+
 
 def assert_response_error(
     response: Response,

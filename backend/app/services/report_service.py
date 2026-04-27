@@ -11,7 +11,11 @@ from app.crud.report import CRUDReport, CRUDReportDep
 from app.crud.user import CRUDUser, CRUDUserDep
 from app.dependencies import DBSessionDep
 from app.models import *
-from app.services.access_control_service import AccessControlService, AccessControlServiceDep
+from app.services.access_control_service import (
+    AccessControlService,
+    AccessControlServiceDep,
+)
+
 
 class ReportService:
     def __init__(
@@ -20,7 +24,7 @@ class ReportService:
         crud_user: CRUDUser,
         crud_doc: CRUDDocument,
         crud_report: CRUDReport,
-        access_control: AccessControlService
+        access_control: AccessControlService,
     ):
         self.db_session = db_session
         self.crud_user = crud_user
@@ -45,7 +49,9 @@ class ReportService:
         if err:
             raise err
 
-        report_reason = self.db_session.execute(select(ReportReason).where(ReportReason.id == reason)).scalar_one_or_none()
+        report_reason = self.db_session.execute(
+            select(ReportReason).where(ReportReason.id == reason)
+        ).scalar_one_or_none()
         if report_reason is None:
             raise AppException(ErrorCode.RESOURCE_NOT_FOUND, "Invalid Report Reason")
 
@@ -151,7 +157,7 @@ def get_report_service(
     crud_user: CRUDUserDep,
     crud_doc: CRUDDocumentDep,
     crud_report: CRUDReportDep,
-    access_control: AccessControlServiceDep
+    access_control: AccessControlServiceDep,
 ) -> ReportService:
     return ReportService(db_session, crud_user, crud_doc, crud_report, access_control)
 
