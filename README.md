@@ -1,4 +1,9 @@
 [![Run pytest](https://github.com/TuLe142857/DocumentHub/actions/workflows/pytest.yml/badge.svg)](https://github.com/TuLe142857/DocumentHub/actions/workflows/pytest.yml)
+
+> [!NOTE]  
+> Backend API documents: [see here](backend/docs/API.md)  
+> Backend test case for API: [see here](backend/docs/TestCase.md)  
+
 # Requirement
 - Python version: >= 3.12.x
 - Docker 
