@@ -88,7 +88,7 @@ class UserService:
             select(UserProfile).join(User).where(User.username == username)
         ).scalar_one_or_none()
         if profile is None:
-            raise AppException(ErrorCode.INVALID_CREDENTIALS, "User not found")
+            raise AppException(ErrorCode.RESOURCE_NOT_FOUND, "User not found")
         return profile
 
     def update_profile(self, user_id: int, update_dict: dict):
