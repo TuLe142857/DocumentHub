@@ -98,7 +98,7 @@ def categories(db_session) -> list[Category]:
 
 
 @pytest.fixture
-def report_reason(db_session) -> list[ReportReason]:
+def report_reasons(db_session) -> list[ReportReason]:
     print("Create Report Reason for test...")
     report_reasons = []
     for r in [

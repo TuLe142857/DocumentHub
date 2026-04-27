@@ -11,7 +11,7 @@ from app.crud.report import CRUDReport, CRUDReportDep
 from app.crud.user import CRUDUser, CRUDUserDep
 from app.dependencies import DBSessionDep
 from app.models import *
-
+from app.services.access_control_service import AccessControlService, AccessControlServiceDep
 
 class ReportService:
     def __init__(
@@ -20,11 +20,13 @@ class ReportService:
         crud_user: CRUDUser,
         crud_doc: CRUDDocument,
         crud_report: CRUDReport,
+        access_control: AccessControlService
     ):
         self.db_session = db_session
         self.crud_user = crud_user
         self.crud_doc = crud_doc
         self.crud_report = crud_report
+        self.access_control = access_control
 
     def get_available_reason(self) -> Sequence[ReportReason]:
         return self.db_session.execute(select(ReportReason)).scalars().all()
@@ -38,6 +40,14 @@ class ReportService:
                 ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
             ),
         )
+
+        err = self.access_control.can_access_document(reporter, document)
+        if err:
+            raise err
+
+        report_reason = self.db_session.execute(select(ReportReason).where(ReportReason.id == reason)).scalar_one_or_none()
+        if report_reason is None:
+            raise AppException(ErrorCode.RESOURCE_NOT_FOUND, "Invalid Report Reason")
 
         # check if user has report this document...
         report_in_db = self.db_session.execute(
@@ -141,8 +151,9 @@ def get_report_service(
     crud_user: CRUDUserDep,
     crud_doc: CRUDDocumentDep,
     crud_report: CRUDReportDep,
+    access_control: AccessControlServiceDep
 ) -> ReportService:
-    return ReportService(db_session, crud_user, crud_doc, crud_report)
+    return ReportService(db_session, crud_user, crud_doc, crud_report, access_control)
 
 
 ReportServiceDep = Annotated[ReportService, Depends(get_report_service)]
