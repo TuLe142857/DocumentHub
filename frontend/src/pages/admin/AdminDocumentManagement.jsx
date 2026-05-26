@@ -177,8 +177,6 @@ const AdminDocumentManagement = () => {
         onPageChange={setPage}
       />
 
-      <div>DEBUG DATA</div>
-      <pre>{JSON.stringify(docs, null, 2)}</pre>
     </div>
   );
 };

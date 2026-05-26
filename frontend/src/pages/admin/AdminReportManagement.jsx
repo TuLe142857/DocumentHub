@@ -98,8 +98,6 @@ const AdminReportManagement = () => {
         onPageChange={setPage}
       />
 
-      <div>DEBUG API RESPONSE DATA</div>
-      <pre>{JSON.stringify(docs, null, 2)}</pre>
     </div>
   );
 };

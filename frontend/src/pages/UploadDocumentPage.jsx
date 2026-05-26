@@ -212,8 +212,6 @@ const UploadDocumentPage = () => {
         >
           Upload
         </button>
-
-        <pre>{JSON.stringify(formData, null, 4)}</pre>
       </form>
     </div>
   );
