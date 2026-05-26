@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import api from '@/api/api.js';
 
 const UploadDocumentPage = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: '',
     desc: '',
@@ -76,6 +79,27 @@ const UploadDocumentPage = () => {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+
+    const missingFields = [];
+    if (!formData.title || formData.title.trim() === '') {
+      missingFields.push('Title');
+    }
+    if (!formData.file) {
+      missingFields.push('File');
+    }
+    if (!formData.visibility || formData.visibility === '') {
+      missingFields.push('Visibility');
+    }
+    if (!formData.category_id || formData.category_id === '') {
+      missingFields.push('Category');
+    }
+
+    if (missingFields.length > 0) {
+      toast.error(`Please provide the following required fields: ${missingFields.join(', ')}`);
+      return;
+    }
+
+    const toastId = toast.loading('Uploading document...');
     try {
       setError(null);
       // await api.post('/documents', formData, {
@@ -95,11 +119,22 @@ const UploadDocumentPage = () => {
       await api.post('/documents', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      // alert('ok');
+      toast.update(toastId, {
+        type: 'success',
+        render: 'Upload document successfully!',
+        isLoading: false,
+        autoClose: 2000,
+      });
+      navigate('/');
     } catch (err) {
-      setError(
-        err?.response?.data?.message || 'Something went wrong, please try again'
-      );
+      const msg = err?.response?.data?.message || 'Something went wrong, please try again';
+      setError(msg);
+      toast.update(toastId, {
+        type: 'error',
+        render: msg,
+        isLoading: false,
+        autoClose: 3000,
+      });
     } finally {
       setLoading(false);
     }
