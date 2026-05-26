@@ -41,7 +41,7 @@ const UploadDocumentPage = () => {
       } catch (err) {
         setError(
           err?.response?.data?.message ||
-            'Something went wrong, please try again'
+          'Something went wrong, please try again'
         );
       } finally {
         setLoading(false);
@@ -58,7 +58,7 @@ const UploadDocumentPage = () => {
       const file = files[0];
       if (!file) return;
       setFormData((prev) => ({ ...prev, file: file }));
-      alert(file);
+      // alert(file);
     } else if (name === 'tags') {
       if (value.endsWith(' ') || value.endsWith(',')) {
         const newTag = value.replace(' ', '').replace(',', '');
@@ -95,7 +95,7 @@ const UploadDocumentPage = () => {
       await api.post('/documents', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      alert('ok');
+      // alert('ok');
     } catch (err) {
       setError(
         err?.response?.data?.message || 'Something went wrong, please try again'
@@ -143,6 +143,7 @@ const UploadDocumentPage = () => {
             id="fileSelect"
             type="file"
             name="file"
+            accept={supportedTypes.map((type) => type.startsWith('.') ? type : `.${type}`).join(', ')}
             onChange={handleFormChange}
             hidden={true}
           />
@@ -151,6 +152,9 @@ const UploadDocumentPage = () => {
           ) : (
             <div>No file choosen</div>
           )}
+        </div>
+        <div className="text-xs text-gray-500 ml-2 -mt-1">
+          Supported formats: {supportedTypes.map((type) => type.startsWith('.') ? type : `.${type}`).join(', ')}
         </div>
 
         <div className="text-black font-bold">Visibility</div>
