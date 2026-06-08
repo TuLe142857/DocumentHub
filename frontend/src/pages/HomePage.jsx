@@ -14,7 +14,7 @@ const CategoryBar = ({ categories }) => {
             key={category.id}
             className="font-bold bg-white text-blue-700 rounded-full p-2 hover:cursor-pointer hover:bg-sky-200"
             onClick={() =>
-              navigate(`/search?category_id=${encodeURIComponent(category.id)}`)
+              navigate(`/search?category_ids=${encodeURIComponent(category.id)}`)
             }
           >
             {category?.name || 'something went wrong'}
@@ -73,6 +73,7 @@ const HomePage = () => {
           const params = {
             category_ids: category.id,
             sort: '-view,-like,-download,-created_at',
+            limit: 5
           };
 
           const response = await api.get(`search`, { params: params });
