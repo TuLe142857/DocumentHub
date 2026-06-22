@@ -687,7 +687,15 @@ class DocumentService:
             document.status = DocumentStatus.READY
         self.db_session.add(document)
 
-    def ban_document(self, admin: User, document_id: int, note: str | None = None):
+    def get_document_by_id(self, document_id: int) -> Document:
+        return self.crud_doc.get(
+            document_id,
+            on_not_found=AppException(
+                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
+            ),
+        )
+
+    def set_document_banned(self, admin: User, document_id: int):
         document = self.crud_doc.get(
             document_id,
             on_not_found=AppException(
@@ -706,17 +714,10 @@ class DocumentService:
 
         document.status = DocumentStatus.BANNED
         document.banned_at = datetime.datetime.now(datetime.timezone.utc)
-        moderation_log = ModerationLog(
-            document_id=document_id,
-            admin_id=admin.id,
-            action=ModerationAction.BAN_DOCUMENT,
-            note=note,
-        )
 
         self.db_session.add(document)
-        self.db_session.add(moderation_log)
 
-    def unban_document(self, admin: User, document_id: int, note: str | None = None):
+    def set_document_unbanned(self, admin: User, document_id: int):
         document = self.crud_doc.get(
             document_id,
             on_not_found=AppException(
@@ -737,15 +738,8 @@ class DocumentService:
             document.status = DocumentStatus.DELETED
 
         document.banned_at = None
-        moderation_log = ModerationLog(
-            document_id=document_id,
-            admin_id=admin.id,
-            action=ModerationAction.UNBAN_DOCUMENT,
-            note=note,
-        )
 
         self.db_session.add(document)
-        self.db_session.add(moderation_log)
 
 
 def get_document_service(

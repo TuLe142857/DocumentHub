@@ -6,7 +6,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.core import AppException, ErrorCode
-from app.crud.document import CRUDDocument, CRUDDocumentDep
+from app.services.document_service import DocumentService, DocumentServiceDep
 from app.crud.report import CRUDReport, CRUDReportDep
 from app.crud.user import CRUDUser, CRUDUserDep
 from app.dependencies import DBSessionDep
@@ -22,13 +22,13 @@ class ReportService:
         self,
         db_session: Session,
         crud_user: CRUDUser,
-        crud_doc: CRUDDocument,
+        document_service: DocumentService,
         crud_report: CRUDReport,
         access_control: AccessControlService,
     ):
         self.db_session = db_session
         self.crud_user = crud_user
-        self.crud_doc = crud_doc
+        self.document_service = document_service
         self.crud_report = crud_report
         self.access_control = access_control
 
@@ -38,12 +38,7 @@ class ReportService:
     def report_document(
         self, reporter: User, document_id: int, reason: int, desc: str | None
     ):
-        document = self.crud_doc.get(
-            document_id,
-            on_not_found=AppException(
-                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
-            ),
-        )
+        document = self.document_service.get_document_by_id(document_id)
 
         err = self.access_control.can_access_document(reporter, document)
         if err:
@@ -107,12 +102,7 @@ class ReportService:
     def list_pending_reports(
         self, document_id: int, page: int = 1, limit: int = 10
     ) -> tuple[Sequence[DocumentReport], int]:
-        self.crud_doc.get(
-            document_id,
-            on_not_found=AppException(
-                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
-            ),
-        )
+        self.document_service.get_document_by_id(document_id)
         return self.crud_report.get_multi(
             DocumentReport.status == ReportStatus.PENDING,
             DocumentReport.document_id == document_id,
@@ -126,16 +116,10 @@ class ReportService:
         if admin.role.name != "ADMIN":
             raise AppException(ErrorCode.FORBIDDEN)
 
-        document = self.crud_doc.get(
-            document_id,
-            on_not_found=AppException(
-                ErrorCode.RESOURCE_NOT_FOUND, "Document not found"
-            ),
-        )
+        self.document_service.get_document_by_id(document_id)
 
         if accept:
-            document.banned_at = datetime.datetime.now(datetime.timezone.utc)
-            document.status = DocumentStatus.BANNED
+            self.document_service.set_document_banned(admin, document_id)
 
         effected_row_count = self.db_session.execute(
             update(DocumentReport)
@@ -160,15 +144,35 @@ class ReportService:
 
         self.db_session.add(mod_log)
 
+    def ban_document(self, admin: User, document_id: int, note: str | None = None):
+        self.document_service.set_document_banned(admin, document_id)
+        moderation_log = ModerationLog(
+            document_id=document_id,
+            admin_id=admin.id,
+            action=ModerationAction.BAN_DOCUMENT,
+            note=note,
+        )
+        self.db_session.add(moderation_log)
+
+    def unban_document(self, admin: User, document_id: int, note: str | None = None):
+        self.document_service.set_document_unbanned(admin, document_id)
+        moderation_log = ModerationLog(
+            document_id=document_id,
+            admin_id=admin.id,
+            action=ModerationAction.UNBAN_DOCUMENT,
+            note=note,
+        )
+        self.db_session.add(moderation_log)
+
 
 def get_report_service(
     db_session: DBSessionDep,
     crud_user: CRUDUserDep,
-    crud_doc: CRUDDocumentDep,
+    document_service: DocumentServiceDep,
     crud_report: CRUDReportDep,
     access_control: AccessControlServiceDep,
 ) -> ReportService:
-    return ReportService(db_session, crud_user, crud_doc, crud_report, access_control)
+    return ReportService(db_session, crud_user, document_service, crud_report, access_control)
 
 
 ReportServiceDep = Annotated[ReportService, Depends(get_report_service)]

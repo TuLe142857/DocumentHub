@@ -14,6 +14,7 @@ from app.schemas.document_schema import (
 )
 from app.services.auth_service import CurrentAdminDep
 from app.services.document_service import DocumentServiceDep
+from app.services.report_service import ReportServiceDep
 from app.services.storage_service import StorageServiceDep
 
 router = APIRouter(prefix="/documents")
@@ -65,7 +66,7 @@ def get_document_details(
 def unban_document(
     document_id: int,
     admin: CurrentAdminDep,
-    document_service: DocumentServiceDep,
+    report_service: ReportServiceDep,
 ):
-    document_service.unban_document(admin=admin, document_id=document_id)
+    report_service.unban_document(admin=admin, document_id=document_id)
     return APIResponse.ok()
