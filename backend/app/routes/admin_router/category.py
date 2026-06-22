@@ -7,7 +7,7 @@ from app.core import (
     ResponseSuccessSchema,
 )
 from app.services.auth_service import CurrentAdminDep
-from app.services.document_service import DocumentServiceDep
+from app.services.category_service import CategoryServiceDep
 
 router = APIRouter(prefix="/categories")
 
@@ -16,9 +16,9 @@ router = APIRouter(prefix="/categories")
 def create_category(
     category_name: Annotated[str, Body(alias="name", embed=True)],
     admin: CurrentAdminDep,
-    document_service: DocumentServiceDep,
+    category_service: CategoryServiceDep,
 ):
-    document_service.create_category(category_name)
+    category_service.create_category(category_name)
     return APIResponse.ok()
 
 
@@ -27,9 +27,9 @@ def rename_category(
     category_id: int,
     category_new_name: Annotated[str, Body(alias="new_name", embed=True)],
     admin: CurrentAdminDep,
-    document_service: DocumentServiceDep,
+    category_service: CategoryServiceDep,
 ):
-    document_service.rename_category(category_id, category_new_name)
+    category_service.rename_category(category_id, category_new_name)
     return APIResponse.ok()
 
 
@@ -41,7 +41,7 @@ def rename_category(
 def delete_category(
     category_id: int,
     admin: CurrentAdminDep,
-    document_service: DocumentServiceDep,
+    category_service: CategoryServiceDep,
 ):
-    document_service.delete_category(category_id)
+    category_service.delete_category(category_id)
     return APIResponse.ok()

@@ -76,7 +76,7 @@ class CategoryService:
             raise AppException(ErrorCode.RESOURCE_NOT_FOUND, "Category does not exist")
 
         is_used = self.db_session.execute(
-            select(Document).where(Document.category_id == category_id)
+            select(Document).where(Document.category_id == category_id).limit(1)
         ).scalar_one_or_none()
 
         if is_used:
